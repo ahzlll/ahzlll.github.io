@@ -1,0 +1,1085 @@
+/* 粉色主题样式 - 温馨浪漫的感觉 */
+
+/* 引入好看的字体 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* 整体背景色改为偏白的粉色 */
+body {
+  background-color: #FFF0F5 !important; /* Lavender Blush - 偏白的粉色 */
+}
+
+/* 卡片和文章容器背景色 - 纯白色（合并transition） */
+#recent-posts .recent-post-item,
+.article-sort-item,
+.card-widget,
+#article-container {
+  background-color: #FFFFFF !important;
+  transition: all 0.3s ease;
+}
+
+/* 侧边栏背景色 */
+#aside-content {
+  background-color: #FFF0F5 !important;
+}
+
+#aside-content .card-widget {
+  background-color: #FFFFFF !important;
+  border-top: 3px solid #FF69B4 !important;
+  border-color: rgba(255, 105, 180, 0.2) !important;
+}
+
+/* 搜索框、侧边栏菜单、标签页背景色 - 白色（合并） */
+.search-dialog,
+#local-search-input input,
+#algolia-search-input input,
+.sidebar-menu,
+.tab-button,
+.tab-button-active {
+  background-color: #FFFFFF !important;
+}
+
+/* 为卡片添加粉色渐变阴影 */
+#recent-posts .recent-post-item:hover,
+.article-sort-item:hover {
+  box-shadow: 0 8px 16px rgba(255, 182, 193, 0.2) !important;
+  transform: translateY(-2px);
+}
+
+/* 按钮粉色+蓝色渐变效果 - 覆盖所有按钮 */
+#article-container .btn,
+button,
+.btn,
+.btn-default,
+.btn-primary,
+.btn-success,
+.btn-info,
+.btn-warning,
+.btn-danger,
+a.btn,
+input[type="button"],
+input[type="submit"],
+.button {
+  background: linear-gradient(135deg, #FFB6C1 0%, #FF69B4 50%, #87CEEB 100%) !important;
+  border-color: #FF69B4 !important;
+  color: #fff !important;
+  transition: all 0.3s ease;
+}
+
+#article-container .btn:hover,
+button:hover,
+.btn:hover,
+.btn-default:hover,
+.btn-primary:hover,
+.btn-success:hover,
+.btn-info:hover,
+.btn-warning:hover,
+.btn-danger:hover,
+a.btn:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+.button:hover {
+  background: linear-gradient(135deg, #FF91A4 0%, #FF1493 50%, #5F9EA0 100%) !important;
+  border-color: #FF1493 !important;
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+/* 链接悬停效果 */
+a:hover {
+  color: #FF69B4 !important;
+  transition: color 0.2s ease;
+}
+
+/* Header 背景色保持蓝色（重要：覆盖主题颜色） */
+#page-header {
+  background-color: #49B1F5 !important; /* 蓝色，保持不变 */
+}
+
+/* 导航栏样式 */
+#nav {
+  background: transparent;
+  backdrop-filter: blur(10px);
+}
+
+#nav .menus_item:hover > a {
+  color: #49B1F5 !important; /* 导航栏悬停保持蓝色 */
+}
+
+/* 代码块边框 - 文章内使用灰色，其他地方保持粉色 */
+#article-container .highlight,
+#article-container pre,
+#article-container code {
+  border-left: 4px solid #E0E0E0 !important;
+  border-color: #E0E0E0 !important;
+  background-color: #F5F5F5 !important;
+}
+
+/* 文章外的代码块保持粉色 */
+.highlight:not(#article-container .highlight),
+pre:not(#article-container pre),
+code:not(#article-container code) {
+  border-left: 4px solid #FF69B4 !important;
+  border-color: #FF69B4 !important;
+}
+
+/* 代码块文字颜色 - 正常深色 */
+#article-container .highlight,
+#article-container pre,
+#article-container code,
+#article-container .highlight *,
+#article-container pre *,
+#article-container code * {
+  color: #333333 !important; /* 深灰色代码文字 */
+}
+
+/* 引用块 - 文章内使用灰色，其他地方保持粉色 */
+#article-container blockquote {
+  border-left: 4px solid #E0E0E0 !important;
+  background: #F9F9F9 !important;
+}
+
+/* 文章外的引用块保持粉色 */
+blockquote:not(#article-container blockquote) {
+  border-left: 4px solid #FF69B4 !important;
+  background: linear-gradient(to right, rgba(255, 182, 193, 0.3), rgba(135, 206, 235, 0.2)) !important;
+}
+
+/* 引用块文字颜色 - 正常深色 */
+#article-container blockquote,
+#article-container blockquote p,
+#article-container blockquote * {
+  color: #333333 !important; /* 深灰色引用文字 */
+}
+
+/* 文章内的元素使用灰色边框 */
+#article-container .highlight,
+#article-container blockquote,
+#article-container .note {
+  border-color: #E0E0E0 !important;
+}
+
+/* 通用边框颜色 - 针对特定元素 */
+.tag,
+.btn,
+button {
+  border-color: #FF69B4 !important;
+}
+
+/* 输入框边框 */
+input,
+textarea,
+select {
+  border-color: #FFB6C1 !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #FF69B4 !important;
+  box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2), 0 0 0 3px rgba(135, 206, 235, 0.1) !important;
+}
+
+/* 标签柔和色系主题 - 咖色、粉色、米白色 */
+#article-container .tag-Link,
+.tag-Link,
+.tag,
+.tags a,
+.post-meta__tags a {
+  background: linear-gradient(135deg, rgba(250, 240, 230, 0.4) 0%, rgba(245, 213, 213, 0.3) 50%, rgba(210, 180, 140, 0.25) 100%) !important;
+  border: 1px solid rgba(210, 180, 140, 0.3) !important;
+  color: #8B6F47 !important;
+  transition: all 0.3s ease;
+}
+
+#article-container .tag-Link:hover,
+.tag-Link:hover,
+.tag:hover,
+.tags a:hover,
+.post-meta__tags a:hover {
+  background: linear-gradient(135deg, rgba(250, 240, 230, 0.6) 0%, rgba(245, 213, 213, 0.5) 50%, rgba(210, 180, 140, 0.4) 100%) !important;
+  border-color: rgba(210, 180, 140, 0.5) !important;
+  color: #6B5639 !important;
+  transform: scale(1.05);
+}
+
+/* 分页器粉色+蓝色主题 */
+.pagination .page-number.current {
+  background: linear-gradient(135deg, #FF69B4 0%, #87CEEB 100%) !important;
+  color: #fff !important;
+  border-color: #FF69B4 !important;
+}
+
+.pagination .page-number:hover {
+  color: #FF69B4 !important;
+  border-color: #FF69B4 !important;
+  background: rgba(255, 105, 180, 0.1) !important;
+}
+
+/* 滚动条粉色+蓝色主题 */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #FF69B4 0%, #FFB6C1 50%, #87CEEB 100%) !important;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #FF1493 0%, #FF69B4 50%, #5F9EA0 100%) !important;
+}
+
+/* 选中文本粉色背景 */
+::selection {
+  background: rgba(255, 182, 193, 0.4) !important;
+  color: #8B4A6B !important;
+}
+
+::-moz-selection {
+  background: rgba(255, 182, 193, 0.4) !important;
+  color: #8B4A6B !important;
+}
+
+/* 目录粉色+蓝色主题 */
+#aside-content .toc-content a:hover,
+.toc a:hover {
+  color: #FF69B4 !important;
+  background: rgba(255, 105, 180, 0.1) !important;
+}
+
+#aside-content .toc-content a.active,
+.toc a.active {
+  color: #FF69B4 !important;
+  border-left-color: #87CEEB !important;
+}
+
+/* 搜索框粉色+蓝色边框 */
+#local-search-input:focus,
+#algolia-search-input:focus,
+.search-input:focus,
+input[type="search"]:focus {
+  border-color: #FF69B4 !important;
+  box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.3), 0 0 0 4px rgba(135, 206, 235, 0.1) !important;
+}
+
+/* 加载动画粉色+蓝色主题 */
+.loading,
+.loader,
+.spinner {
+  border-top-color: #FF69B4 !important;
+  border-right-color: #87CEEB !important;
+  border-bottom-color: #FFB6C1 !important;
+  border-left-color: #5F9EA0 !important;
+}
+
+/* 文章标题下划线效果 - 使用灰色 */
+#article-container h1::after,
+#article-container h2::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: #E0E0E0;
+  margin-top: 10px;
+  border-radius: 2px;
+}
+
+/* 卡片悬停时的粉色光晕效果 */
+.card-widget:hover,
+#recent-posts .recent-post-item:hover {
+  position: relative;
+}
+
+.card-widget:hover::before,
+#recent-posts .recent-post-item:hover::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(135deg, rgba(255, 182, 193, 0.15), rgba(255, 192, 203, 0.15));
+  border-radius: 8px;
+  z-index: -1;
+  opacity: 0;
+  animation: pinkGlow 0.6s ease forwards;
+}
+
+@keyframes pinkGlow {
+  to {
+    opacity: 1;
+  }
+}
+
+/* 网站标题字体样式 - 更大更美观 */
+#site-title {
+  font-family: 'Noto Sans SC', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif !important;
+  font-size: 2.5em !important;
+  font-weight: 500 !important;
+  letter-spacing: 2px !important;
+}
+
+@media (min-width: 768px) {
+  #site-title {
+    font-size: 4.2em !important;
+  }
+}
+
+/* 打字机效果样式 */
+#typing-effect {
+  text-align: center;
+  margin: 20px 0;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#typing-text {
+  font-family: 'Noto Sans SC', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif !important;
+  color: rgba(255, 230, 250, 0.95);
+  font-size: 1.6em;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5), 0 0 8px rgba(255, 200, 230, 0.3);
+  line-height: 1.8;
+  font-weight: 300;
+  letter-spacing: 1.5px;
+  min-height: 1.8em;
+  display: inline-block;
+  font-style: italic;
+}
+
+#typing-text::after {
+  content: '|';
+  color: rgba(255, 200, 230, 0.9);
+  animation: blink 1s infinite;
+  margin-left: 2px;
+  font-weight: 300;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* 文章标题和日期加粗效果 */
+.article-title,
+.post-title,
+.recent-post-info > .article-title,
+#post-info .post-title {
+  font-weight: bold !important;
+}
+
+/* 文章标题白色字体边框效果 */
+#post-info .post-title {
+  -webkit-text-stroke: 1px #ffffff !important;
+  /* 兼容性：使用 text-shadow 作为备用方案 */
+  text-shadow: 
+    -0.5px -0.5px 0 #ffffff,
+    0.5px -0.5px 0 #ffffff,
+    -0.5px 0.5px 0 #ffffff,
+    0.5px 0.5px 0 #ffffff,
+    -1px 0 0 #ffffff,
+    1px 0 0 #ffffff,
+    0 -1px 0 #ffffff,
+    0 1px 0 #ffffff !important;
+}
+
+.post-meta-date,
+.article-meta-date,
+.post-meta-date-created,
+.post-meta-date-updated,
+.article-sort-item-time time,
+.post-meta-date time {
+  font-weight: bold !important;
+}
+
+/* 文章内容区域文字颜色 - 确保为正常深色，不是粉色 */
+#article-container,
+#article-container .article-content,
+#article-container .post-content,
+#article-container .entry-content,
+#article-container p,
+#article-container li,
+#article-container td,
+#article-container th,
+#article-container div:not(.btn):not(.tag):not(.note) {
+  color: #333333 !important; /* 深灰色文字 */
+}
+
+/* 表格文字颜色 - 确保正常深色 */
+#article-container table,
+#article-container table td,
+#article-container table th,
+#article-container table tr,
+#article-container table * {
+  color: #333333 !important; /* 深灰色表格文字 */
+}
+
+/* 文章内容里的标题颜色 - 深色（确保在白色背景上可见） */
+#article-container h1,
+#article-container h2,
+#article-container h3,
+#article-container h4,
+#article-container h5,
+#article-container h6 {
+  color: #2c3e50 !important; /* 深色标题 */
+}
+
+/* 文章主标题颜色 - 深色（确保在白色背景上可见） */
+.article-title,
+.post-title {
+  color: #2c3e50 !important;
+}
+
+/* 文章元信息颜色 - 深灰色 */
+#article-container .post-meta,
+#article-container .article-meta,
+#article-container .post-meta-date,
+#article-container .article-meta-date {
+  color: #666666 !important; /* 中灰色 */
+}
+
+/* 文章正文链接颜色 - 保持蓝色，悬停时深蓝色 */
+#article-container .article-content a,
+#article-container .post-content a,
+#article-container .entry-content a {
+  color: #49B1F5 !important; /* 蓝色链接 */
+}
+
+#article-container .article-content a:hover,
+#article-container .post-content a:hover,
+#article-container .entry-content a:hover {
+  color: #1E88E5 !important; /* 悬停时深蓝色 */
+}
+
+/* Note 样式 - 文章内使用灰色，其他地方保持粉色 */
+#article-container .note-success,
+#article-container .note.note-success,
+#article-container [class*="note-success"] {
+  border-color: #E0E0E0 !important;
+  background: #F5F5F5 !important;
+}
+
+/* 文章外的 note 保持粉色 */
+.note-success:not(#article-container .note-success),
+.note.note-success:not(#article-container .note.note-success),
+[class*="note-success"]:not(#article-container [class*="note-success"]) {
+  border-color: #FF69B4 !important;
+  background: linear-gradient(to right, rgba(255, 182, 193, 0.2), rgba(135, 206, 235, 0.1)) !important;
+}
+
+/* Note 文字颜色 - 正常深色 */
+#article-container .note,
+#article-container .note *,
+#article-container .note-success,
+#article-container .note-success *,
+#article-container [class*="note"] {
+  color: #333333 !important; /* 深灰色文字 */
+}
+
+/* 文章内的 note-modern 使用灰色 */
+#article-container .note-modern-success,
+#article-container .note-modern.note-success {
+  border-color: #E0E0E0 !important;
+  background: #F5F5F5 !important;
+}
+
+/* 文章外的 note-modern 保持粉色 */
+.note-modern-success:not(#article-container .note-modern-success),
+.note-modern.note-success:not(#article-container .note-modern.note-success) {
+  border-color: #FFB6C1 !important;
+  background: rgba(255, 182, 193, 0.15) !important;
+}
+
+#article-container .note-modern,
+#article-container .note-modern * {
+  color: #333333 !important; /* 深灰色文字 */
+}
+
+/* 覆盖绿色标签样式 - 使用柔和色系 */
+.tags-green,
+.tag-green,
+[class*="tag-green"],
+[class*="tags-green"] {
+  background: linear-gradient(135deg, rgba(250, 240, 230, 0.4) 0%, rgba(245, 213, 213, 0.3) 50%, rgba(210, 180, 140, 0.25) 100%) !important;
+  border-color: rgba(210, 180, 140, 0.3) !important;
+  color: #8B6F47 !important;
+}
+
+/* 覆盖所有可能的绿色边框和背景 */
+[style*="5cb85c"],
+[style*="#5cb85c"],
+[style*="green"] {
+  border-color: #FF69B4 !important;
+}
+
+/* 卡片边框粉色+蓝色（合并边框和悬停效果） */
+.card-widget,
+.recent-post-item,
+.article-sort-item {
+  border: 1px solid rgba(255, 105, 180, 0.2) !important;
+}
+
+.card-widget:hover,
+.recent-post-item:hover,
+.article-sort-item:hover {
+  border-color: #FF69B4 !important;
+  box-shadow: 0 8px 16px rgba(255, 105, 180, 0.2), 0 0 20px rgba(135, 206, 235, 0.1) !important;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  #article-container h1::after,
+  #article-container h2::after {
+    width: 40px;
+    height: 2px;
+  }
+  
+  #site-title {
+    font-size: 2.2em !important;
+    letter-spacing: 1px !important;
+  }
+  
+  #typing-text {
+    font-size: 1.3em;
+    padding: 0 10px;
+    letter-spacing: 1px;
+  }
+}
+
+/* ============================================
+   黑色模式样式覆盖 - 修复粉色背景问题
+   ============================================ */
+
+/* 黑色模式下的整体背景 - 深色而不是粉色 */
+[data-theme='dark'] body {
+  background-color: #0d0d0d !important; /* 深色背景 */
+}
+
+/* 黑色模式下的卡片背景 - 深灰色，适当留白 */
+[data-theme='dark'] #recent-posts .recent-post-item,
+[data-theme='dark'] .article-sort-item,
+[data-theme='dark'] .card-widget {
+  background-color: #121212 !important; /* 深灰色卡片 */
+  color: rgba(255, 255, 255, 0.7) !important; /* 浅色文字 */
+}
+
+/* 黑色模式下的文章容器 - 更深的背景色 */
+[data-theme='dark'] #article-container {
+  background-color: #1a1a1a !important; /* 更深的背景色 */
+  color: rgba(255, 255, 255, 0.7) !important; /* 浅色文字 */
+}
+
+/* 黑色模式下的侧边栏 */
+[data-theme='dark'] #aside-content {
+  background-color: #0d0d0d !important; /* 深色背景 */
+}
+
+[data-theme='dark'] #aside-content .card-widget {
+  background-color: #121212 !important; /* 深灰色卡片 */
+  border-top: 3px solid rgba(255, 105, 180, 0.3) !important; /* 淡粉色边框 */
+  border-color: rgba(255, 105, 180, 0.2) !important;
+  color: rgba(255, 255, 255, 0.7) !important; /* 浅色文字 */
+}
+
+/* 黑色模式下的搜索框 */
+[data-theme='dark'] .search-dialog {
+  background-color: #121212 !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme='dark'] #local-search-input input,
+[data-theme='dark'] #algolia-search-input input {
+  background-color: #1f1f1f !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(255, 105, 180, 0.3) !important;
+}
+
+/* 黑色模式下的侧边栏菜单 */
+[data-theme='dark'] .sidebar-menu {
+  background-color: #1f1f1f !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 黑色模式下的标签页 */
+[data-theme='dark'] .tab-button {
+  background-color: #2c2c2c !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme='dark'] .tab-button-active {
+  background-color: #121212 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* 黑色模式下的按钮 - 使用深色背景，保留粉色作为强调色 */
+[data-theme='dark'] #article-container .btn,
+[data-theme='dark'] button,
+[data-theme='dark'] .btn,
+[data-theme='dark'] .btn-default,
+[data-theme='dark'] .btn-primary,
+[data-theme='dark'] .btn-success,
+[data-theme='dark'] .btn-info,
+[data-theme='dark'] .btn-warning,
+[data-theme='dark'] .btn-danger,
+[data-theme='dark'] a.btn,
+[data-theme='dark'] input[type="button"],
+[data-theme='dark'] input[type="submit"],
+[data-theme='dark'] .button {
+  background: linear-gradient(135deg, #1f1f1f 0%, #2c2c2c 50%, #1f1f1f 100%) !important;
+  border-color: rgba(255, 105, 180, 0.5) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme='dark'] #article-container .btn:hover,
+[data-theme='dark'] button:hover,
+[data-theme='dark'] .btn:hover {
+  background: linear-gradient(135deg, #2c2c2c 0%, rgba(255, 105, 180, 0.2) 50%, #2c2c2c 100%) !important;
+  border-color: rgba(255, 105, 180, 0.7) !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+/* 黑色模式下的链接 */
+[data-theme='dark'] a {
+  color: rgba(135, 206, 235, 0.8) !important; /* 浅蓝色链接 */
+}
+
+/* 黑色模式下文章外的链接悬停保持粉色 */
+[data-theme='dark'] a:hover {
+  color: rgba(255, 105, 180, 0.9) !important; /* 粉色悬停 */
+}
+
+/* 黑色模式下文章内的链接悬停使用深蓝色 - 放在后面以确保优先级 */
+[data-theme='dark'] #article-container a:hover {
+  color: rgba(100, 181, 246, 1) !important; /* 深蓝色悬停 */
+}
+
+/* 黑色模式下的代码块 - 文章内使用灰色 */
+[data-theme='dark'] #article-container .highlight,
+[data-theme='dark'] #article-container pre,
+[data-theme='dark'] #article-container code {
+  background-color: #1f1f1f !important;
+  border-left: 4px solid rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 黑色模式下文章外的代码块保持粉色 */
+[data-theme='dark'] .highlight:not(#article-container .highlight),
+[data-theme='dark'] pre:not(#article-container pre),
+[data-theme='dark'] code:not(#article-container code) {
+  background-color: #1f1f1f !important;
+  border-left: 4px solid rgba(255, 105, 180, 0.5) !important;
+  border-color: rgba(255, 105, 180, 0.3) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 黑色模式下的引用块 - 文章内使用灰色 */
+[data-theme='dark'] #article-container blockquote {
+  border-left: 4px solid rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 黑色模式下文章外的引用块保持粉色 */
+[data-theme='dark'] blockquote:not(#article-container blockquote) {
+  border-left: 4px solid rgba(255, 105, 180, 0.5) !important;
+  background: rgba(255, 105, 180, 0.05) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 黑色模式下的输入框 */
+[data-theme='dark'] input,
+[data-theme='dark'] textarea,
+[data-theme='dark'] select {
+  background-color: #1f1f1f !important;
+  border-color: rgba(255, 105, 180, 0.3) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme='dark'] input:focus,
+[data-theme='dark'] textarea:focus,
+[data-theme='dark'] select:focus {
+  border-color: rgba(255, 105, 180, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2) !important;
+}
+
+/* 黑色模式下的标签 */
+[data-theme='dark'] #article-container .tag-Link,
+[data-theme='dark'] .tag-Link,
+[data-theme='dark'] .tag,
+[data-theme='dark'] .tags a,
+[data-theme='dark'] .post-meta__tags a {
+  background: linear-gradient(135deg, rgba(180, 160, 140, 0.2) 0%, rgba(200, 170, 150, 0.15) 50%, rgba(160, 130, 110, 0.15) 100%) !important;
+  border: 1px solid rgba(180, 160, 140, 0.3) !important;
+  color: rgba(220, 200, 180, 0.9) !important;
+}
+
+[data-theme='dark'] #article-container .tag-Link:hover,
+[data-theme='dark'] .tag-Link:hover,
+[data-theme='dark'] .tag:hover,
+[data-theme='dark'] .tags a:hover,
+[data-theme='dark'] .post-meta__tags a:hover {
+  background: linear-gradient(135deg, rgba(180, 160, 140, 0.3) 0%, rgba(200, 170, 150, 0.25) 50%, rgba(160, 130, 110, 0.25) 100%) !important;
+  border-color: rgba(180, 160, 140, 0.5) !important;
+  color: rgba(240, 220, 200, 1) !important;
+}
+
+/* 黑色模式下的分页器 */
+[data-theme='dark'] .pagination .page-number.current {
+  background: rgba(255, 105, 180, 0.3) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 105, 180, 0.5) !important;
+}
+
+[data-theme='dark'] .pagination .page-number:hover {
+  color: rgba(255, 182, 193, 0.9) !important;
+  border-color: rgba(255, 105, 180, 0.5) !important;
+  background: rgba(255, 105, 180, 0.15) !important;
+}
+
+/* 黑色模式下的滚动条 */
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 105, 180, 0.5) 0%, rgba(135, 206, 235, 0.4) 100%) !important;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 105, 180, 0.7) 0%, rgba(135, 206, 235, 0.6) 100%) !important;
+}
+
+/* 黑色模式下的选中文本 */
+[data-theme='dark'] ::selection {
+  background: rgba(255, 105, 180, 0.3) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme='dark'] ::-moz-selection {
+  background: rgba(255, 105, 180, 0.3) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* 黑色模式下的目录 */
+[data-theme='dark'] #aside-content .toc-content a:hover,
+[data-theme='dark'] .toc a:hover {
+  color: rgba(255, 182, 193, 0.9) !important;
+  background: rgba(255, 105, 180, 0.1) !important;
+}
+
+[data-theme='dark'] #aside-content .toc-content a.active,
+[data-theme='dark'] .toc a.active {
+  color: rgba(255, 182, 193, 0.9) !important;
+  border-left-color: rgba(135, 206, 235, 0.6) !important;
+}
+
+/* 黑色模式下的卡片边框 */
+[data-theme='dark'] .card-widget,
+[data-theme='dark'] .recent-post-item,
+[data-theme='dark'] .article-sort-item {
+  border: 1px solid rgba(255, 105, 180, 0.15) !important; /* 非常淡的边框 */
+}
+
+[data-theme='dark'] .card-widget:hover,
+[data-theme='dark'] .recent-post-item:hover,
+[data-theme='dark'] .article-sort-item:hover {
+  border-color: rgba(255, 105, 180, 0.4) !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 105, 180, 0.1) !important;
+}
+
+/* 黑色模式下的文章标题下划线 - 使用灰色 */
+[data-theme='dark'] #article-container h1::after,
+[data-theme='dark'] #article-container h2::after {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 黑色模式下的打字机效果文字 */
+[data-theme='dark'] #typing-text {
+  color: rgba(255, 230, 250, 0.9) !important;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(255, 105, 180, 0.4) !important;
+}
+
+[data-theme='dark'] #typing-text::after {
+  color: rgba(255, 182, 193, 0.9) !important;
+}
+
+/* 黑色模式下的 note 样式 - 文章内使用灰色 */
+[data-theme='dark'] #article-container .note-success,
+[data-theme='dark'] #article-container .note.note-success,
+[data-theme='dark'] #article-container [class*="note-success"] {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme='dark'] #article-container .note-modern-success,
+[data-theme='dark'] #article-container .note-modern.note-success {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* 黑色模式下文章外的 note 保持粉色 */
+[data-theme='dark'] .note-success:not(#article-container .note-success),
+[data-theme='dark'] .note.note-success:not(#article-container .note.note-success),
+[data-theme='dark'] [class*="note-success"]:not(#article-container [class*="note-success"]) {
+  border-color: rgba(255, 105, 180, 0.5) !important;
+  background: rgba(255, 105, 180, 0.08) !important;
+  color: rgba(255, 182, 193, 0.9) !important;
+}
+
+[data-theme='dark'] .note-modern-success:not(#article-container .note-modern-success),
+[data-theme='dark'] .note-modern.note-success:not(#article-container .note-modern.note-success) {
+  border-color: rgba(255, 182, 193, 0.4) !important;
+  background: rgba(255, 105, 180, 0.05) !important;
+  color: rgba(255, 182, 193, 0.9) !important;
+}
+
+/* 黑色模式下的文字颜色 - 确保所有文字可见 */
+[data-theme='dark'] .article-title,
+[data-theme='dark'] .post-title,
+[data-theme='dark'] .recent-post-info > .article-title,
+[data-theme='dark'] #post-info .post-title {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme='dark'] .post-meta-date,
+[data-theme='dark'] .article-meta-date,
+[data-theme='dark'] .post-meta-date-created,
+[data-theme='dark'] .post-meta-date-updated,
+[data-theme='dark'] .article-sort-item-time time,
+[data-theme='dark'] .post-meta-date time {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* 黑色模式下的正文文字 */
+[data-theme='dark'] #article-container,
+[data-theme='dark'] .article-content,
+[data-theme='dark'] .post-content {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 黑色模式下的标题文字 */
+[data-theme='dark'] h1,
+[data-theme='dark'] h2,
+[data-theme='dark'] h3,
+[data-theme='dark'] h4,
+[data-theme='dark'] h5,
+[data-theme='dark'] h6 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+
+/* 黑色模式下的段落文字 */
+[data-theme='dark'] p {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 黑色模式下的列表文字 */
+[data-theme='dark'] li {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 黑色模式下的表格 */
+[data-theme='dark'] table {
+  background-color: #1f1f1f !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme='dark'] table th,
+[data-theme='dark'] table td {
+  border-color: rgba(255, 105, 180, 0.2) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme='dark'] table th {
+  background-color: rgba(255, 105, 180, 0.1) !important;
+}
+
+/* ============================================
+   双栏模式下隐藏时光轴（归档卡片）
+   ============================================ */
+
+/* 当侧边栏显示时（双栏模式），隐藏归档卡片 */
+.layout:not(.hide-aside) #aside-content .card-archives {
+  display: none !important;
+}
+
+/* ============================================
+   隐藏文章更新时间
+   ============================================ */
+
+/* 隐藏文章页面的更新时间 */
+.post-meta-date-updated {
+  display: none !important;
+}
+
+/* 隐藏更新时间前的分隔符（创建时间和更新时间之间的分隔符） */
+.post-meta-date-created + .post-meta-separator {
+  display: none !important;
+}
+
+/* 隐藏更新时间的图标和标签 */
+.post-meta-date-created + .post-meta-separator + i.fa-history,
+.post-meta-date-created + .post-meta-separator + i.fa-history + .post-meta-label {
+  display: none !important;
+}
+
+/* 隐藏首页文章列表的更新时间 */
+.article-meta-wrap .post-meta-date-updated,
+.article-meta-date-updated {
+  display: none !important;
+}
+
+/* 隐藏首页文章列表更新时间前的分隔符 */
+.article-meta-wrap .post-meta-date-created + .article-meta-separator,
+.article-meta-date-created + .article-meta-separator {
+  display: none !important;
+}
+
+/* 隐藏首页文章列表更新时间的图标和标签 */
+.article-meta-wrap .post-meta-date-created + .article-meta-separator + i.fa-history,
+.article-meta-wrap .post-meta-date-created + .article-meta-separator + i.fa-history + .article-meta-label,
+.article-meta-date-created + .article-meta-separator + i.fa-history,
+.article-meta-date-created + .article-meta-separator + i.fa-history + .article-meta-label {
+  display: none !important;
+}
+
+/* 隐藏文章中的浏览量显示 */
+#post-meta .post-meta-pv-cv,
+#post-meta #busuanzi_value_page_pv,
+.post-meta-pv-cv {
+  display: none !important;
+}
+
+/* 隐藏浏览量前面的分隔符（使用 :has() 选择器，现代浏览器支持） */
+#post-meta .post-meta-separator:has(+ .post-meta-pv-cv) {
+  display: none !important;
+}
+
+/* ============================================
+   为"写博客一年来的总结与思考"文章添加背景图片（图片40%，文字60%分开显示）
+   文字在左边，图片在右边，无动画效果
+   ============================================ */
+
+/* 为特定文章设置布局 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) {
+  position: relative !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+/* 创建图片区域（40%，在右边） */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"])::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 40% !important;
+  height: 100% !important;
+  background-image: url('/img/think.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 创建占位元素，占据 40% 的 flex 空间（用于图片区域，在右边） */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"])::after {
+  content: '' !important;
+  width: 40% !important;
+  flex: 0 0 40% !important;
+  height: 100% !important;
+  order: 2 !important; /* 确保在文字内容之后（右边） */
+}
+
+/* 调整文字内容区域宽度为 60%，并设置 flex 属性（在左边） */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) .recent-post-info {
+  width: 60% !important;
+  flex: 0 0 60% !important;
+  padding-left: 40px !important;
+  padding-right: 20px !important;
+  position: relative !important;
+  z-index: 1 !important;
+  order: 1 !important; /* 确保在图片之前（左边） */
+}
+
+/* 确保链接区域不覆盖图片 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) .recent-post-item-link {
+  z-index: 2 !important;
+}
+
+/* 隐藏原有的封面图（如果有） */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) .post_cover {
+  display: none !important;
+}
+
+/* 覆盖通用 hover 规则，确保 hover 时图片仍然在右边 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]):hover {
+  flex-direction: row !important; /* 确保 hover 时仍然是横向布局 */
+}
+
+/* 覆盖通用 hover 的 ::before 规则，确保 hover 时图片位置不变 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]):hover::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  left: auto !important; /* 覆盖通用规则中的 left: -2px */
+  bottom: auto !important; /* 覆盖通用规则中的 bottom: -2px */
+  width: 40% !important;
+  height: 100% !important;
+  background-image: url('/img/think.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  border-radius: 0 !important; /* 移除通用规则中的 border-radius */
+  opacity: 1 !important; /* 移除通用规则中的动画效果 */
+  animation: none !important; /* 禁用动画 */
+}
+
+/* 确保 hover 时文字内容区域仍然在左边 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]):hover .recent-post-info {
+  width: 60% !important;
+  flex: 0 0 60% !important;
+  order: 1 !important; /* 确保在左边 */
+}
+
+/* 确保 hover 时占位元素仍然在右边 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]):hover::after {
+  content: '' !important;
+  width: 40% !important;
+  flex: 0 0 40% !important;
+  height: 100% !important;
+  order: 2 !important; /* 确保在右边 */
+}
+
+/* 移动端响应式：图片在上，文字在下 */
+@media screen and (max-width: 768px) {
+  #recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) {
+    flex-direction: column !important;
+  }
+  
+  #recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"])::before {
+    width: 100% !important;
+    height: 230px !important;
+    right: 0 !important;
+    top: 0 !important;
+  }
+  
+  /* 移动端隐藏占位元素 */
+  #recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"])::after {
+    display: none !important;
+  }
+  
+  #recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) .recent-post-info {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    margin-top: 0 !important;
+    order: 2 !important; /* 移动端文字在图片下方 */
+  }
+}
