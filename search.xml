@@ -1,6 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>博客开张：记录本大学生后端开发的思考与成长</title>
+    <url>/2024/11/03/2024-11-03-my-first-blog-post/</url>
+    <content><![CDATA[<h2 id="写在前面"><a href="#写在前面" class="headerlink" title="写在前面"></a>写在前面</h2><p>今天是我开始写博客的第一天（终于下定决心了！）。作为一名后端开发学习者，我决定用这个博客记录我在开发过程中的思考、踩过的坑以及收获。虽然不知道能坚持多久，但至少先开始吧 😅</p>
+<h2 id="为什么要写博客？"><a href="#为什么要写博客？" class="headerlink" title="为什么要写博客？"></a>为什么要写博客？</h2><ol>
+<li><strong>知识沉淀</strong>：把零散的知识点整理成体系化的文章</li>
+<li><strong>问题复盘</strong>：记录debug过程，下次遇到类似问题能快速定位</li>
+<li><strong>技术成长</strong>：通过写作加深对技术的理解</li>
+<li><strong>分享交流</strong>：希望能帮助到遇到同样问题的开发者</li>
+</ol>
+<h2 id="博客内容规划"><a href="#博客内容规划" class="headerlink" title="博客内容规划"></a>博客内容规划</h2><p>这个博客主要会记录：</p>
+<ul>
+<li><strong>后端开发思考</strong>：架构设计、性能优化、代码质量等</li>
+<li><strong>Debug经验</strong>：实际项目中遇到的问题和解决方案</li>
+<li><strong>技术学习</strong>：学习新技术的心得和总结</li>
+<li><strong>踩坑记录</strong>：那些让人头疼的bug和解决方案</li>
+</ul>
+<h2 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h2><p>希望这个博客能见证我的技术成长，也希望能为其他开发者提供一些参考（虽然现在还是个菜鸟哈哈哈）。</p>
+<p>路漫漫其修远兮，吾将上下而求索。</p>
+<p>PS: 如果文章有错误，欢迎指正！毕竟还在学习中，难免会有理解不到位的地方 😊</p>
+]]></content>
+      <categories>
+        <category>随便说说</category>
+      </categories>
+      <tags>
+        <tag>随笔</tag>
+        <tag>后端开发</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Hello World</title>
     <url>/2024/11/03/hello-world/</url>
     <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
