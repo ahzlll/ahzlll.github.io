@@ -30,6 +30,50 @@
       </tags>
   </entry>
   <entry>
+    <title>用户中心项目踩坑记：密码加密那些事儿</title>
+    <url>/2024/11/15/2024-11-15-password-security/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>这是我做的第一个项目。前几天我对安全的理解只停留在“别写出 bug 就行”。直到在测试数据库时，亲眼看到 <code>user_password</code> 字段里躺着一串串明文密码，才想起之前刷到的视频里一句话：“明文密码 &#x3D; 红线”。本文记录我从明文存储到使用 BCrypt 的全过程，留给也在苦苦写项目的同学做参考。</p>
+<h2 id="问题爆发：数据库里的“裸奔”密码"><a href="#问题爆发：数据库里的“裸奔”密码" class="headerlink" title="问题爆发：数据库里的“裸奔”密码"></a>问题爆发：数据库里的“裸奔”密码</h2><p>项目初期我只想先跑通流程，直接把前端传来的密码丢进数据库。控制层代码大概是这样：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 错误示范，请勿模仿</span></span><br><span class="line"><span class="meta">@PostMapping(&quot;/register&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">register</span><span class="params">(<span class="meta">@RequestBody</span> User user)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (user.getPassword().length() &lt; <span class="number">8</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.error(<span class="string">&quot;密码长度不足&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    userMapper.insert(user); <span class="comment">// 直接存明文</span></span><br><span class="line">    <span class="keyword">return</span> Result.success();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当我用 Navicat 打开数据表，<code>&quot;12345678&quot;</code>、<code>&quot;abcdefg&quot;</code> 等弱密码全在里面。此刻我才意识到：如果数据库被拖库，所有用户账号都会暴露。</p>
+<h2 id="解决过程：BCrypt-的救赎"><a href="#解决过程：BCrypt-的救赎" class="headerlink" title="解决过程：BCrypt 的救赎"></a>解决过程：BCrypt 的救赎</h2><h3 id="1-选型"><a href="#1-选型" class="headerlink" title="1. 选型"></a>1. 选型</h3><p>查资料后锁定几个常见方案：</p>
+<ul>
+<li><code>MD5</code>：不可逆，但彩虹表和 GPU 暴力破解太快；</li>
+<li><code>SHA</code>：同样属于快速哈希，对密码保护不够；</li>
+<li><code>BCrypt</code>：自带盐值，计算慢，可拖慢暴力破解。</li>
+</ul>
+<p>结合 Spring 生态，我直接使用 <code>BCryptPasswordEncoder</code>，不必自己维护盐值，整合也很顺。</p>
+<h3 id="2-代码改造"><a href="#2-代码改造" class="headerlink" title="2. 代码改造"></a>2. 代码改造</h3><p><strong>引入依赖</strong></p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-security<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>注册加密 Bean</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SecurityConfig</span> &#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> PasswordEncoder <span class="title function_">passwordEncoder</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">BCryptPasswordEncoder</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>改造注册 &#x2F; 登录逻辑</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">UserServiceImpl</span> <span class="keyword">implements</span> <span class="title class_">UserService</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> PasswordEncoder passwordEncoder;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">register</span><span class="params">(User user)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">encodedPassword</span> <span class="operator">=</span> passwordEncoder.encode(user.getPassword());</span><br><span class="line">        user.setPassword(encodedPassword);</span><br><span class="line">        userMapper.insert(user);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> User <span class="title function_">login</span><span class="params">(String account, String password)</span> &#123;</span><br><span class="line">        <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userMapper.selectByAccount(account);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;用户不存在&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!passwordEncoder.matches(password, user.getPassword())) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;密码错误&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> user;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-新坑：字段长度不够"><a href="#3-新坑：字段长度不够" class="headerlink" title="3. 新坑：字段长度不够"></a>3. 新坑：字段长度不够</h3><p>BCrypt 生成的哈希大约 60 个字符，而我的 <code>user_password</code> 是 <code>varchar(50)</code>。插入时报错，只能赶紧迁表：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER TABLE</span> <span class="keyword">user</span></span><br><span class="line">MODIFY <span class="keyword">COLUMN</span> user_password <span class="type">VARCHAR</span>(<span class="number">60</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;密码哈希&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次踩坑的收获：</p>
+<ul>
+<li>明文密码绝对不能入库，BCrypt 是上手友好的方案；</li>
+<li>哈希字符串会更长，库表字段要预留空间；</li>
+<li>善用框架提供的工具，别重复造轮子。</li>
+</ul>
+<p>下一篇我应该还会记录在这个项目遇到的其他问题，希望还能坚持写下去，欢迎催更！</p>
+]]></content>
+      <categories>
+        <category>Debug 经验</category>
+      </categories>
+      <tags>
+        <tag>后端开发</tag>
+        <tag>安全</tag>
+        <tag>Spring Boot</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Hello World</title>
     <url>/2024/11/03/hello-world/</url>
     <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>

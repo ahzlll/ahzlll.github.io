@@ -1,0 +1,269 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>用户中心项目踩坑记：密码加密那些事儿 | Ahzlll's Blog</title><meta name="author" content="Ahz Hong"><meta name="copyright" content="Ahz Hong"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#FFF0F5"><meta name="description" content="前言这是我做的第一个项目。前几天我对安全的理解只停留在“别写出 bug 就行”。直到在测试数据库时，亲眼看到 user_password 字段里躺着一串串明文密码，才想起之前刷到的视频里一句话：“明文密码 &#x3D; 红线”。本文记录我从明文存储到使用 BCrypt 的全过程，留给也在苦苦写项目的同学做参考。 问题爆发：数据库里的“裸奔”密码项目初期我只想先跑通流程，直接把前端传来的密码丢进数据">
+<meta property="og:type" content="article">
+<meta property="og:title" content="用户中心项目踩坑记：密码加密那些事儿">
+<meta property="og:url" content="https://ahzlll.github.io/2024/11/15/2024-11-15-password-security/index.html">
+<meta property="og:site_name" content="Ahzlll&#39;s Blog">
+<meta property="og:description" content="前言这是我做的第一个项目。前几天我对安全的理解只停留在“别写出 bug 就行”。直到在测试数据库时，亲眼看到 user_password 字段里躺着一串串明文密码，才想起之前刷到的视频里一句话：“明文密码 &#x3D; 红线”。本文记录我从明文存储到使用 BCrypt 的全过程，留给也在苦苦写项目的同学做参考。 问题爆发：数据库里的“裸奔”密码项目初期我只想先跑通流程，直接把前端传来的密码丢进数据">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ahzlll.github.io/img/head.jpg">
+<meta property="article:published_time" content="2024-11-15T12:30:13.000Z">
+<meta property="article:modified_time" content="2025-11-20T13:17:45.790Z">
+<meta property="article:author" content="Ahz Hong">
+<meta property="article:tag" content="后端开发">
+<meta property="article:tag" content="安全">
+<meta property="article:tag" content="Spring Boot">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ahzlll.github.io/img/head.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "用户中心项目踩坑记：密码加密那些事儿",
+  "url": "https://ahzlll.github.io/2024/11/15/2024-11-15-password-security/",
+  "image": "https://ahzlll.github.io/img/head.jpg",
+  "datePublished": "2024-11-15T12:30:13.000Z",
+  "dateModified": "2025-11-20T13:17:45.790Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Ahz Hong",
+      "url": "https://ahzlll.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://ahzlll.github.io/2024/11/15/2024-11-15-password-security/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preload" href="/img/ddd.jpg" as="image" fetchpriority="high"><link rel="stylesheet" href="/css/index.css?v=5.5.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#8B4A6B')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#FFF0F5')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '用户中心项目踩坑记：密码加密那些事儿',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom-green-theme.css"><script src="/js/busuanzi-fix.js"></script><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/head.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">3</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/links/"><i class="fa-fw fas fa-link"></i><span> 友情链接</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时光轴</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Ahzlll's Blog</span></a><a class="nav-page-title" href="/"><span class="site-name">用户中心项目踩坑记：密码加密那些事儿</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/links/"><i class="fa-fw fas fa-link"></i><span> 友情链接</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时光轴</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">用户中心项目踩坑记：密码加密那些事儿</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-11-15T12:30:13.000Z" title="发表于 2024-11-15 20:30:13">2024-11-15</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-11-20T13:17:45.790Z" title="更新于 2025-11-20 21:17:45">2025-11-20</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Debug-%E7%BB%8F%E9%AA%8C/">Debug 经验</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>这是我做的第一个项目。前几天我对安全的理解只停留在“别写出 bug 就行”。直到在测试数据库时，亲眼看到 <code>user_password</code> 字段里躺着一串串明文密码，才想起之前刷到的视频里一句话：“明文密码 &#x3D; 红线”。本文记录我从明文存储到使用 BCrypt 的全过程，留给也在苦苦写项目的同学做参考。</p>
+<h2 id="问题爆发：数据库里的“裸奔”密码"><a href="#问题爆发：数据库里的“裸奔”密码" class="headerlink" title="问题爆发：数据库里的“裸奔”密码"></a>问题爆发：数据库里的“裸奔”密码</h2><p>项目初期我只想先跑通流程，直接把前端传来的密码丢进数据库。控制层代码大概是这样：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 错误示范，请勿模仿</span></span><br><span class="line"><span class="meta">@PostMapping(&quot;/register&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">register</span><span class="params">(<span class="meta">@RequestBody</span> User user)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (user.getPassword().length() &lt; <span class="number">8</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.error(<span class="string">&quot;密码长度不足&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    userMapper.insert(user); <span class="comment">// 直接存明文</span></span><br><span class="line">    <span class="keyword">return</span> Result.success();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当我用 Navicat 打开数据表，<code>&quot;12345678&quot;</code>、<code>&quot;abcdefg&quot;</code> 等弱密码全在里面。此刻我才意识到：如果数据库被拖库，所有用户账号都会暴露。</p>
+<h2 id="解决过程：BCrypt-的救赎"><a href="#解决过程：BCrypt-的救赎" class="headerlink" title="解决过程：BCrypt 的救赎"></a>解决过程：BCrypt 的救赎</h2><h3 id="1-选型"><a href="#1-选型" class="headerlink" title="1. 选型"></a>1. 选型</h3><p>查资料后锁定几个常见方案：</p>
+<ul>
+<li><code>MD5</code>：不可逆，但彩虹表和 GPU 暴力破解太快；</li>
+<li><code>SHA</code>：同样属于快速哈希，对密码保护不够；</li>
+<li><code>BCrypt</code>：自带盐值，计算慢，可拖慢暴力破解。</li>
+</ul>
+<p>结合 Spring 生态，我直接使用 <code>BCryptPasswordEncoder</code>，不必自己维护盐值，整合也很顺。</p>
+<h3 id="2-代码改造"><a href="#2-代码改造" class="headerlink" title="2. 代码改造"></a>2. 代码改造</h3><p><strong>引入依赖</strong></p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-security<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>注册加密 Bean</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SecurityConfig</span> &#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> PasswordEncoder <span class="title function_">passwordEncoder</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">BCryptPasswordEncoder</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>改造注册 &#x2F; 登录逻辑</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">UserServiceImpl</span> <span class="keyword">implements</span> <span class="title class_">UserService</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> PasswordEncoder passwordEncoder;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">register</span><span class="params">(User user)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">encodedPassword</span> <span class="operator">=</span> passwordEncoder.encode(user.getPassword());</span><br><span class="line">        user.setPassword(encodedPassword);</span><br><span class="line">        userMapper.insert(user);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> User <span class="title function_">login</span><span class="params">(String account, String password)</span> &#123;</span><br><span class="line">        <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userMapper.selectByAccount(account);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;用户不存在&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!passwordEncoder.matches(password, user.getPassword())) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;密码错误&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> user;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-新坑：字段长度不够"><a href="#3-新坑：字段长度不够" class="headerlink" title="3. 新坑：字段长度不够"></a>3. 新坑：字段长度不够</h3><p>BCrypt 生成的哈希大约 60 个字符，而我的 <code>user_password</code> 是 <code>varchar(50)</code>。插入时报错，只能赶紧迁表：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER TABLE</span> <span class="keyword">user</span></span><br><span class="line">MODIFY <span class="keyword">COLUMN</span> user_password <span class="type">VARCHAR</span>(<span class="number">60</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;密码哈希&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次踩坑的收获：</p>
+<ul>
+<li>明文密码绝对不能入库，BCrypt 是上手友好的方案；</li>
+<li>哈希字符串会更长，库表字段要预留空间；</li>
+<li>善用框架提供的工具，别重复造轮子。</li>
+</ul>
+<p>下一篇我应该还会记录在这个项目遇到的其他问题，希望还能坚持写下去，欢迎催更！</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://ahzlll.github.io">Ahz Hong</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://ahzlll.github.io/2024/11/15/2024-11-15-password-security/">https://ahzlll.github.io/2024/11/15/2024-11-15-password-security/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://ahzlll.github.io" target="_blank">Ahzlll's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/">后端开发</a><a class="post-meta__tags" href="/tags/%E5%AE%89%E5%85%A8/">安全</a><a class="post-meta__tags" href="/tags/Spring-Boot/">Spring Boot</a></div><div class="post-share"><div class="social-share" data-image="/img/head.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2024/11/03/2024-11-03-my-first-blog-post/" title="博客开张：记录本大学生后端开发的思考与成长"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">博客开张：记录本大学生后端开发的思考与成长</div></div><div class="info-2"><div class="info-item-1">写在前面今天是我开始写博客的第一天（终于下定决心了！）。作为一名后端开发学习者，我决定用这个博客记录我在开发过程中的思考、踩过的坑以及收获。虽然不知道能坚持多久，但至少先开始吧 😅 为什么要写博客？ 知识沉淀：把零散的知识点整理成体系化的文章 问题复盘：记录debug过程，下次遇到类似问题能快速定位 技术成长：通过写作加深对技术的理解 分享交流：希望能帮助到遇到同样问题的开发者  博客内容规划这个博客主要会记录：  后端开发思考：架构设计、性能优化、代码质量等 Debug经验：实际项目中遇到的问题和解决方案 技术学习：学习新技术的心得和总结 踩坑记录：那些让人头疼的bug和解决方案  写在最后希望这个博客能见证我的技术成长，也希望能为其他开发者提供一些参考（虽然现在还是个菜鸟哈哈哈）。 路漫漫其修远兮，吾将上下而求索。 PS: 如果文章有错误，欢迎指正！毕竟还在学习中，难免会有理解不到位的地方 😊 </div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2024/11/03/2024-11-03-my-first-blog-post/" title="博客开张：记录本大学生后端开发的思考与成长"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-11-03</div><div class="info-item-2">博客开张：记录本大学生后端开发的思考与成长</div></div><div class="info-2"><div class="info-item-1">写在前面今天是我开始写博客的第一天（终于下定决心了！）。作为一名后端开发学习者，我决定用这个博客记录我在开发过程中的思考、踩过的坑以及收获。虽然不知道能坚持多久，但至少先开始吧 😅 为什么要写博客？ 知识沉淀：把零散的知识点整理成体系化的文章 问题复盘：记录debug过程，下次遇到类似问题能快速定位 技术成长：通过写作加深对技术的理解 分享交流：希望能帮助到遇到同样问题的开发者  博客内容规划这个博客主要会记录：  后端开发思考：架构设计、性能优化、代码质量等 Debug经验：实际项目中遇到的问题和解决方案 技术学习：学习新技术的心得和总结 踩坑记录：那些让人头疼的bug和解决方案  写在最后希望这个博客能见证我的技术成长，也希望能为其他开发者提供一些参考（虽然现在还是个菜鸟哈哈哈）。 路漫漫其修远兮，吾将上下而求索。 PS: 如果文章有错误，欢迎指正！毕竟还在学习中，难免会有理解不到位的地方 😊 </div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/head.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="author-info-name">Ahz Hong</div><div class="author-info-description">用代码编织梦想，用文字记录成长，偶尔记录下踩过的坑和收获</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">3</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/ahzlll"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><div style="line-height: 1.8;">
+  <p style="margin: 0.5em 0; font-weight: bold; color: var(--theme-color);">👋 欢迎来到我的博客！</p>
+  <p style="margin: 0.5em 0;">我是 <strong>Ahz Hong</strong>，一名后端开发学习者</p>
+  <p style="margin: 0.5em 0;">📝 这里记录我的技术思考、踩坑经验和学习笔记</p>
+  <hr style="margin: 0.8em 0; border: none; border-top: 1px solid var(--hr-border);">
+  <p style="margin: 0.5em 0;"><strong>💻 技术栈：</strong>Java | Spring Boot | MySQL | Redis | 分布式系统</p>
+  <p style="margin: 0.5em 0;"><strong>🎯 当前状态：</strong><span id="code-status">加载中...</span></p>
+  <p style="margin: 0.5em 0;"><strong>📚 学习方向：</strong>微服务架构 | 系统设计 | 性能优化</p>
+  <hr style="margin: 0.8em 0; border: none; border-top: 1px solid var(--hr-border);">
+  <p style="margin: 0.5em 0; font-size: 0.9em; color: var(--font-color);">
+    💬 欢迎交流讨论，一起进步！<br>
+    🔗 <a href="https://github.com/ahzlll" target="_blank" style="color: var(--theme-color);">GitHub</a> | 
+    📧 有问题欢迎留言
+  </p>
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E7%88%86%E5%8F%91%EF%BC%9A%E6%95%B0%E6%8D%AE%E5%BA%93%E9%87%8C%E7%9A%84%E2%80%9C%E8%A3%B8%E5%A5%94%E2%80%9D%E5%AF%86%E7%A0%81"><span class="toc-number">2.</span> <span class="toc-text">问题爆发：数据库里的“裸奔”密码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%A7%A3%E5%86%B3%E8%BF%87%E7%A8%8B%EF%BC%9ABCrypt-%E7%9A%84%E6%95%91%E8%B5%8E"><span class="toc-number">3.</span> <span class="toc-text">解决过程：BCrypt 的救赎</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-%E9%80%89%E5%9E%8B"><span class="toc-number">3.1.</span> <span class="toc-text">1. 选型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-%E4%BB%A3%E7%A0%81%E6%94%B9%E9%80%A0"><span class="toc-number">3.2.</span> <span class="toc-text">2. 代码改造</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-%E6%96%B0%E5%9D%91%EF%BC%9A%E5%AD%97%E6%AE%B5%E9%95%BF%E5%BA%A6%E4%B8%8D%E5%A4%9F"><span class="toc-number">3.3.</span> <span class="toc-text">3. 新坑：字段长度不够</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Ahz Hong</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.1"></script><script src="/js/main.js?v=5.5.1"></script><script src="https://cdn.jsdelivr.net/npm/instant.page@5.2.0/instantpage.min.js" type="module"></script><div class="js-pjax"></div><script src="/js/typing-effect.js" defer></script><script src="/js/code-check.js" defer></script><script src="/js/random-background.js" defer></script><script src="https://cdn.jsdelivr.net/npm/pjax@0.2.8/pjax.min.js"></script><script>(() => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    if (btf && btf.removeGlobalFnEvent) {
+      btf.removeGlobalFnEvent('pjaxSendOnce')
+      btf.removeGlobalFnEvent('themeChange')
+    }
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    if (btf && btf.removeGlobalFnEvent) {
+      btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    }
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      const usePjax = true
+      false
+        ? (usePjax ? pjax.loadUrl('/404.html') : window.location.href = '/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})()</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.5.1"></script></div></div></body></html>
