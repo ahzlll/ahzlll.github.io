@@ -30,6 +30,75 @@
       </tags>
   </entry>
   <entry>
+    <title>Hello World</title>
+    <url>/2024/11/03/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
+  </entry>
+  <entry>
+    <title>用户中心项目踩坑记：登录态管理的那些坑</title>
+    <url>/2024/11/20/2024-11-20-login-session/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>项目又又又有问题，浏览器刷新一下就得重新登录，手机和电脑也无法共享状态。作为一个大二学生，只能说完全就是啥也不会，只能一点点地查资料。本文记录我如何把零散的 Session 改成基于 Redis 的 Token 方案，希望给也在自学的同学一点参考。</p>
+<h2 id="问题现象：登录态“稍纵即逝”"><a href="#问题现象：登录态“稍纵即逝”" class="headerlink" title="问题现象：登录态“稍纵即逝”"></a>问题现象：登录态“稍纵即逝”</h2><p>最开始我直接用 Spring Boot 自带的 <code>HttpSession</code> 保存用户对象：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request, HttpSession session)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    session.setAttribute(<span class="string">&quot;user&quot;</span>, user); <span class="comment">// 明明存了，但总丢</span></span><br><span class="line">    <span class="keyword">return</span> Result.success(user);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>随之暴露了三个痛点：</p>
+<ol>
+<li>前端用 React，刷新页面后 Session 丢失，用户得重新登录（本地两个浏览器窗口就能稳定复现）；</li>
+<li>我重启后端服务，所有用户全被踢下线（开发环境重启一次就得重新登录一遍）；</li>
+<li>同一账号 PC 登录后，手机端完全感知不到状态（我用同一 Wi-Fi 下的手机访问本地调试地址验证的）。</li>
+</ol>
+<h2 id="解决过程：Redis-Token"><a href="#解决过程：Redis-Token" class="headerlink" title="解决过程：Redis + Token"></a>解决过程：Redis + Token</h2><h3 id="1-技术选型"><a href="#1-技术选型" class="headerlink" title="1. 技术选型"></a>1. 技术选型</h3><p>我调研了三种方案：</p>
+<ul>
+<li><strong>原生 Session</strong>：依赖单机内存，重启或多实例时会混乱；</li>
+<li><strong>JWT</strong>：无状态但无法主动失效，对我现在的需求来说不好控制；</li>
+<li><strong>Redis + Token</strong>：登录后生成 Token，把用户信息放到 Redis，可控可失效，还能扩展到多节点。</li>
+</ul>
+<p>综合复杂度和可维护性，我选择第三种。</p>
+<h3 id="2-引入-Redis-依赖"><a href="#2-引入-Redis-依赖" class="headerlink" title="2. 引入 Redis 依赖"></a>2. 引入 Redis 依赖</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-配置-Redis-连接"><a href="#3-配置-Redis-连接" class="headerlink" title="3. 配置 Redis 连接"></a>3. 配置 Redis 连接</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">localhost</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<p>本地用 Docker 起了一个 Redis，正式环境也能直接复用配置。</p>
+<h3 id="4-Token-工具类"><a href="#4-Token-工具类" class="headerlink" title="4. Token 工具类"></a>4. Token 工具类</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TokenUtils</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">generateToken</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;USER_TOKEN:&quot;</span> + UUID.randomUUID().toString().replace(<span class="string">&quot;-&quot;</span>, <span class="string">&quot;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">storeToken</span><span class="params">(String token, UserDTO user)</span> &#123;</span><br><span class="line">        redisTemplate.opsForValue().set(token,</span><br><span class="line">                JSON.toJSONString(user),</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                TimeUnit.HOURS);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> UserDTO <span class="title function_">verifyToken</span><span class="params">(String token)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">userJson</span> <span class="operator">=</span> redisTemplate.opsForValue().get(token);</span><br><span class="line">        <span class="keyword">if</span> (userJson == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        redisTemplate.expire(token, <span class="number">2</span>, TimeUnit.HOURS);</span><br><span class="line">        <span class="keyword">return</span> JSON.parseObject(userJson, UserDTO.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我在这里刻意用了 <code>UserDTO</code>，把密码哈希等敏感字段去掉，避免 Redis 里存全量对象。虽然暂时还没部署，但趁早把敏感字段剥离掉也能避免后面迁移时手忙脚乱。</p>
+<h3 id="5-改造登录接口"><a href="#5-改造登录接口" class="headerlink" title="5. 改造登录接口"></a>5. 改造登录接口</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    <span class="type">UserDTO</span> <span class="variable">safeUser</span> <span class="operator">=</span> UserConvertor.toDTO(user);</span><br><span class="line">    <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> tokenUtils.generateToken(user.getId());</span><br><span class="line">    tokenUtils.storeToken(token, safeUser);</span><br><span class="line">    <span class="keyword">return</span> Result.success(<span class="keyword">new</span> <span class="title class_">LoginResponse</span>(token, safeUser));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>前端拿到 Token 后写入 <code>localStorage</code>，请求时放到 <code>Authorization</code> 头里。现阶段只是我自己在浏览器里调试，但等以后部署到测试环境只需要把基址调一下就能继续沿用。</p>
+<h3 id="6-拦截器校验登录态"><a href="#6-拦截器校验登录态" class="headerlink" title="6. 拦截器校验登录态"></a>6. 拦截器校验登录态</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">LoginInterceptor</span> <span class="keyword">implements</span> <span class="title class_">HandlerInterceptor</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> TokenUtils tokenUtils;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request,</span></span><br><span class="line"><span class="params">                             HttpServletResponse response,</span></span><br><span class="line"><span class="params">                             Object handler)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;Authorization&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.hasText(token)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;未登录&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> tokenUtils.verifyToken(token);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;登录已过期&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        UserContext.set(user); <span class="comment">// ThreadLocal 保存，方便后续获取</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在 <code>WebMvcConfigurer</code> 里把拦截器注册到需要鉴权的接口即可。</p>
+<h2 id="踩坑记录"><a href="#踩坑记录" class="headerlink" title="踩坑记录"></a>踩坑记录</h2><ul>
+<li><strong>Token 传递方式</strong>：最早放在 URL 查询参数，刷新和复制链接都会泄露，最后改成 <code>Authorization</code> 头；</li>
+<li><strong>Redis 序列化</strong>：默认 <code>JdkSerializationRedisSerializer</code> 让 Key 出现乱码，我统一改用 <code>StringRedisTemplate</code> + JSON；</li>
+<li><strong>主动下线</strong>：<code>verifyToken</code> 失败时直接抛异常，这样用户在别的设备登录会触发旧 Token 失效；</li>
+<li><strong>超时续期</strong>：每次验证成功后刷新过期时间，用户只要活跃就不会被踢。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次查了不少资料让我理解了“登录态&#x3D;如何安全记住用户”。原生 Session 在单机调试还行，但遇到多端、多实例就力不从心，更别说以后上线部署（可能有吧 。Redis + Token 虽然多写了点代码，却解决了刷新、重启、分布式和主动失效的问题。下一篇继续记录在这个项目也算是督促自己进步了，希望还能坚持写下去。</p>
+]]></content>
+      <categories>
+        <category>Debug 经验</category>
+      </categories>
+      <tags>
+        <tag>后端开发</tag>
+        <tag>Session</tag>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>用户中心项目踩坑记：密码加密那些事儿</title>
     <url>/2024/11/15/2024-11-15-password-security/</url>
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>这是我做的第一个项目。前几天我对安全的理解只停留在“别写出 bug 就行”。直到在测试数据库时，亲眼看到 <code>user_password</code> 字段里躺着一串串明文密码，才想起之前刷到的视频里一句话：“明文密码 &#x3D; 红线”。本文记录我从明文存储到使用 BCrypt 的全过程，留给也在苦苦写项目的同学做参考。</p>
@@ -72,23 +141,5 @@
         <tag>安全</tag>
         <tag>Spring Boot</tag>
       </tags>
-  </entry>
-  <entry>
-    <title>Hello World</title>
-    <url>/2024/11/03/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
-]]></content>
   </entry>
 </search>
