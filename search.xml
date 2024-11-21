@@ -30,6 +30,175 @@
       </tags>
   </entry>
   <entry>
+    <title>用户中心项目踩坑记：密码加密那些事儿</title>
+    <url>/2024/11/15/2024-11-15-password-security/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>这是我做的第一个项目。前几天我对安全的理解只停留在“别写出 bug 就行”。直到在测试数据库时，亲眼看到 <code>user_password</code> 字段里躺着一串串明文密码，才想起之前刷到的视频里一句话：“明文密码 &#x3D; 红线”。本文记录我从明文存储到使用 BCrypt 的全过程，留给也在苦苦写项目的同学做参考。</p>
+<h2 id="问题爆发：数据库里的“裸奔”密码"><a href="#问题爆发：数据库里的“裸奔”密码" class="headerlink" title="问题爆发：数据库里的“裸奔”密码"></a>问题爆发：数据库里的“裸奔”密码</h2><p>项目初期我只想先跑通流程，直接把前端传来的密码丢进数据库。控制层代码大概是这样：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 错误示范，请勿模仿</span></span><br><span class="line"><span class="meta">@PostMapping(&quot;/register&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">register</span><span class="params">(<span class="meta">@RequestBody</span> User user)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (user.getPassword().length() &lt; <span class="number">8</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.error(<span class="string">&quot;密码长度不足&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    userMapper.insert(user); <span class="comment">// 直接存明文</span></span><br><span class="line">    <span class="keyword">return</span> Result.success();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当我用 Navicat 打开数据表，<code>&quot;12345678&quot;</code>、<code>&quot;abcdefg&quot;</code> 等弱密码全在里面。此刻我才意识到：如果数据库被拖库，所有用户账号都会暴露。</p>
+<h2 id="解决过程：BCrypt-的救赎"><a href="#解决过程：BCrypt-的救赎" class="headerlink" title="解决过程：BCrypt 的救赎"></a>解决过程：BCrypt 的救赎</h2><h3 id="1-选型"><a href="#1-选型" class="headerlink" title="1. 选型"></a>1. 选型</h3><p>查资料后锁定几个常见方案：</p>
+<ul>
+<li><code>MD5</code>：不可逆，但彩虹表和 GPU 暴力破解太快；</li>
+<li><code>SHA</code>：同样属于快速哈希，对密码保护不够；</li>
+<li><code>BCrypt</code>：自带盐值，计算慢，可拖慢暴力破解。</li>
+</ul>
+<p>结合 Spring 生态，我直接使用 <code>BCryptPasswordEncoder</code>，不必自己维护盐值，整合也很顺。</p>
+<h3 id="2-代码改造"><a href="#2-代码改造" class="headerlink" title="2. 代码改造"></a>2. 代码改造</h3><p><strong>引入依赖</strong></p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-security<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>注册加密 Bean</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SecurityConfig</span> &#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> PasswordEncoder <span class="title function_">passwordEncoder</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">BCryptPasswordEncoder</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>改造注册 &#x2F; 登录逻辑</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">UserServiceImpl</span> <span class="keyword">implements</span> <span class="title class_">UserService</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> PasswordEncoder passwordEncoder;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">register</span><span class="params">(User user)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">encodedPassword</span> <span class="operator">=</span> passwordEncoder.encode(user.getPassword());</span><br><span class="line">        user.setPassword(encodedPassword);</span><br><span class="line">        userMapper.insert(user);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> User <span class="title function_">login</span><span class="params">(String account, String password)</span> &#123;</span><br><span class="line">        <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userMapper.selectByAccount(account);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;用户不存在&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!passwordEncoder.matches(password, user.getPassword())) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;密码错误&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> user;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-新坑：字段长度不够"><a href="#3-新坑：字段长度不够" class="headerlink" title="3. 新坑：字段长度不够"></a>3. 新坑：字段长度不够</h3><p>BCrypt 生成的哈希大约 60 个字符，而我的 <code>user_password</code> 是 <code>varchar(50)</code>。插入时报错，只能赶紧迁表：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER TABLE</span> <span class="keyword">user</span></span><br><span class="line">MODIFY <span class="keyword">COLUMN</span> user_password <span class="type">VARCHAR</span>(<span class="number">60</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;密码哈希&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次踩坑的收获：</p>
+<ul>
+<li>明文密码绝对不能入库，BCrypt 是上手友好的方案；</li>
+<li>哈希字符串会更长，库表字段要预留空间；</li>
+<li>善用框架提供的工具，别重复造轮子。</li>
+</ul>
+<p>下一篇我应该还会记录在这个项目遇到的其他问题，希望还能坚持写下去，欢迎催更！</p>
+]]></content>
+      <categories>
+        <category>Debug 经验</category>
+      </categories>
+      <tags>
+        <tag>后端开发</tag>
+        <tag>安全</tag>
+        <tag>Spring Boot</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从零开始搭建个人博客：Hexo + Butterfly 主题实践</title>
+    <url>/2024/11/21/2024-11-21-building-my-blog-with-hexo/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>一直想搭建一个个人博客，记录自己的技术成长和思考（主要是想有个地方记录踩过的坑，免得下次又忘了 😂）。经过一番调研，最终选择了 Hexo + Butterfly 主题。这篇文章记录一下搭建过程和一些踩坑经历（真的踩了好多坑…）。</p>
+<h2 id="为什么选择-Hexo？"><a href="#为什么选择-Hexo？" class="headerlink" title="为什么选择 Hexo？"></a>为什么选择 Hexo？</h2><h3 id="1-静态站点生成器"><a href="#1-静态站点生成器" class="headerlink" title="1. 静态站点生成器"></a>1. 静态站点生成器</h3><p>Hexo 是一个快速、简洁且高效的博客框架，使用 Markdown 编写文章，然后生成静态 HTML 文件。</p>
+<p><strong>优点</strong>：</p>
+<ul>
+<li><strong>速度快</strong>：静态文件，访问速度快</li>
+<li><strong>SEO友好</strong>：静态HTML，搜索引擎容易索引</li>
+<li><strong>免费托管</strong>：可以部署到 GitHub Pages、Netlify 等免费平台</li>
+<li><strong>版本控制</strong>：文章用 Markdown 编写，可以用 Git 管理</li>
+</ul>
+<h3 id="2-丰富的主题"><a href="#2-丰富的主题" class="headerlink" title="2. 丰富的主题"></a>2. 丰富的主题</h3><p>Hexo 有丰富的主题生态，我选择了 Butterfly 主题，因为：</p>
+<ul>
+<li><strong>界面美观</strong>：现代化的设计风格</li>
+<li><strong>功能丰富</strong>：支持代码高亮、搜索、评论等</li>
+<li><strong>文档完善</strong>：中文文档详细，配置简单</li>
+<li><strong>持续更新</strong>：社区活跃，问题能及时解决</li>
+</ul>
+<h2 id="搭建过程"><a href="#搭建过程" class="headerlink" title="搭建过程"></a>搭建过程</h2><h3 id="1-环境准备"><a href="#1-环境准备" class="headerlink" title="1. 环境准备"></a>1. 环境准备</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 安装 Node.js（需要 12.0 以上版本）</span></span><br><span class="line">node -v</span><br><span class="line">npm -v</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安装 Hexo</span></span><br><span class="line">npm install -g hexo-cli</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-初始化项目"><a href="#2-初始化项目" class="headerlink" title="2. 初始化项目"></a>2. 初始化项目</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 创建博客目录</span></span><br><span class="line">hexo init ahzlll.github.io</span><br><span class="line"><span class="built_in">cd</span> ahzlll.github.io</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安装依赖</span></span><br><span class="line">npm install</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-安装-Butterfly-主题"><a href="#3-安装-Butterfly-主题" class="headerlink" title="3. 安装 Butterfly 主题"></a>3. 安装 Butterfly 主题</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 安装主题</span></span><br><span class="line">git <span class="built_in">clone</span> -b master https://github.com/jerryc127/hexo-theme-butterfly.git themes/butterfly</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安装主题依赖</span></span><br><span class="line">npm install hexo-renderer-pug hexo-renderer-stylus --save</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-配置主题"><a href="#4-配置主题" class="headerlink" title="4. 配置主题"></a>4. 配置主题</h3><p>修改 <code>_config.yml</code>：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 站点配置</span></span><br><span class="line"><span class="attr">title:</span> <span class="string">Ahzlll&#x27;s</span> <span class="string">Blog</span></span><br><span class="line"><span class="attr">subtitle:</span> <span class="string">&#x27;后端开发思考&#x27;</span></span><br><span class="line"><span class="attr">description:</span> <span class="string">&#x27;用代码编织梦想，用文字记录成长，偶尔记录下踩过的坑和收获&#x27;</span></span><br><span class="line"><span class="attr">author:</span> <span class="string">Ahz</span> <span class="string">Hong</span></span><br><span class="line"><span class="attr">language:</span> <span class="string">zh-CN</span></span><br><span class="line"><span class="attr">timezone:</span> <span class="string">&#x27;Asia/Shanghai&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 主题配置</span></span><br><span class="line"><span class="attr">theme:</span> <span class="string">butterfly</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># URL配置</span></span><br><span class="line"><span class="attr">url:</span> <span class="string">https://ahzlll.github.io</span></span><br><span class="line"><span class="attr">permalink:</span> <span class="string">:year/:month/:day/:title/</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-本地预览"><a href="#5-本地预览" class="headerlink" title="5. 本地预览"></a>5. 本地预览</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 启动本地服务器</span></span><br><span class="line">hexo server</span><br><span class="line"></span><br><span class="line"><span class="comment"># 访问 http://localhost:4000</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="踩坑经历"><a href="#踩坑经历" class="headerlink" title="踩坑经历"></a>踩坑经历</h2><h3 id="1-中文路径问题"><a href="#1-中文路径问题" class="headerlink" title="1. 中文路径问题"></a>1. 中文路径问题</h3><p><strong>问题</strong>：文章标题包含中文时，生成的URL包含中文，可能导致404。</p>
+<p><strong>解决</strong>：在 <code>_config.yml</code> 中配置：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">permalink:</span> <span class="string">:year/:month/:day/:title/</span></span><br><span class="line"><span class="attr">permalink_defaults:</span></span><br><span class="line"><span class="attr">pretty_urls:</span></span><br><span class="line">  <span class="attr">trailing_index:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">trailing_html:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+
+<p>或者使用英文标题，在文章中使用 <code>title</code> 字段。</p>
+<h3 id="2-图片路径问题"><a href="#2-图片路径问题" class="headerlink" title="2. 图片路径问题"></a>2. 图片路径问题</h3><p><strong>问题</strong>：Markdown 中的图片路径不正确。</p>
+<p><strong>解决</strong>：使用 Hexo 的资源文件夹功能：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">post_asset_folder:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+
+<p>然后在文章中：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">![<span class="string">图片描述</span>](<span class="link">图片名称.jpg</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-代码高亮问题"><a href="#3-代码高亮问题" class="headerlink" title="3. 代码高亮问题"></a>3. 代码高亮问题</h3><p><strong>问题</strong>：代码高亮不生效。</p>
+<p><strong>解决</strong>：安装代码高亮插件：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">npm install hexo-prism-plugin --save</span><br></pre></td></tr></table></figure>
+
+<p>在 <code>_config.yml</code> 中配置：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">prism_plugin:</span></span><br><span class="line">  <span class="attr">mode:</span> <span class="string">&#x27;preprocess&#x27;</span></span><br><span class="line">  <span class="attr">line_number:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">custom_css:</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-搜索功能"><a href="#4-搜索功能" class="headerlink" title="4. 搜索功能"></a>4. 搜索功能</h3><p><strong>问题</strong>：本地搜索不工作。</p>
+<p><strong>解决</strong>：安装搜索插件：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">npm install hexo-generator-searchdb --save</span><br></pre></td></tr></table></figure>
+
+<p>配置：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">search:</span></span><br><span class="line">  <span class="attr">path:</span> <span class="string">search.xml</span></span><br><span class="line">  <span class="attr">field:</span> <span class="string">post</span></span><br><span class="line">  <span class="attr">content:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">format:</span> <span class="string">xml</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-部署到-GitHub-Pages"><a href="#5-部署到-GitHub-Pages" class="headerlink" title="5. 部署到 GitHub Pages"></a>5. 部署到 GitHub Pages</h3><p><strong>问题</strong>：部署后样式丢失。</p>
+<p><strong>解决</strong>：检查 <code>_config.yml</code> 中的 <code>url</code> 配置，确保与 GitHub Pages 地址一致。</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">url:</span> <span class="string">https://ahzlll.github.io</span></span><br><span class="line"><span class="attr">root:</span> <span class="string">/</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="博客配置"><a href="#博客配置" class="headerlink" title="博客配置"></a>博客配置</h2><h3 id="1-添加友链"><a href="#1-添加友链" class="headerlink" title="1. 添加友链"></a>1. 添加友链</h3><p>创建 <code>source/_data/link.yml</code>：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">class_name:</span> <span class="string">技术博客</span></span><br><span class="line">  <span class="attr">class_desc:</span> <span class="string">分享技术心得和开发经验的优秀博客</span></span><br><span class="line">  <span class="attr">link_list:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">Hexo</span></span><br><span class="line">      <span class="attr">link:</span> <span class="string">https://hexo.io/</span></span><br><span class="line">      <span class="attr">avatar:</span> <span class="string">https://hexo.io/favicon.ico</span></span><br><span class="line">      <span class="attr">descr:</span> <span class="string">快速、简洁且高效的博客框架</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-自定义样式"><a href="#2-自定义样式" class="headerlink" title="2. 自定义样式"></a>2. 自定义样式</h3><p>创建 <code>source/css/custom-green-theme.css</code>：</p>
+<figure class="highlight css"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* 自定义样式 */</span></span><br><span class="line"><span class="selector-pseudo">:root</span> &#123;</span><br><span class="line">  <span class="attr">--theme-color</span>: <span class="number">#49b1f5</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在主题配置中引入：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">inject:</span></span><br><span class="line">  <span class="attr">head:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">&lt;link</span> <span class="string">rel=&quot;stylesheet&quot;</span> <span class="string">href=&quot;/css/custom-green-theme.css&quot;&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-添加统计"><a href="#3-添加统计" class="headerlink" title="3. 添加统计"></a>3. 添加统计</h3><p>使用不蒜子统计：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">busuanzi:</span></span><br><span class="line">  <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">site_uv:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">site_pv:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">page_pv:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="写作体验"><a href="#写作体验" class="headerlink" title="写作体验"></a>写作体验</h2><h3 id="1-Markdown-编写"><a href="#1-Markdown-编写" class="headerlink" title="1. Markdown 编写"></a>1. Markdown 编写</h3><p>使用 Markdown 编写文章，简单高效：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">---</span><br><span class="line">title: 文章标题</span><br><span class="line">date: 2024-11-21 20:00:00</span><br><span class="line">tags:</span><br><span class="line"><span class="bullet">  -</span> 标签1</span><br><span class="line"><span class="bullet">  -</span> 标签2</span><br><span class="line">categories:</span><br><span class="line"><span class="section">  - 分类</span></span><br><span class="line"><span class="section">---</span></span><br><span class="line"></span><br><span class="line"><span class="section">## 标题</span></span><br><span class="line"></span><br><span class="line">正文内容...</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-代码高亮"><a href="#2-代码高亮" class="headerlink" title="2. 代码高亮"></a>2. 代码高亮</h3><p>支持多种语言的代码高亮：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line"><span class="code">```java</span></span><br><span class="line"><span class="code">public class Hello &#123;</span></span><br><span class="line"><span class="code">    public static void main(String[] args) &#123;</span></span><br><span class="line"><span class="code">        System.out.println(&quot;Hello World&quot;);</span></span><br><span class="line"><span class="code">    &#125;</span></span><br><span class="line"><span class="code">&#125;</span></span><br><span class="line"><span class="code">```</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-数学公式"><a href="#3-数学公式" class="headerlink" title="3. 数学公式"></a>3. 数学公式</h3><p>支持 LaTeX 数学公式：</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">$$</span><br><span class="line">E = mc^2</span><br><span class="line">$$</span><br></pre></td></tr></table></figure>
+
+<h2 id="部署流程"><a href="#部署流程" class="headerlink" title="部署流程"></a>部署流程</h2><h3 id="1-生成静态文件"><a href="#1-生成静态文件" class="headerlink" title="1. 生成静态文件"></a>1. 生成静态文件</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">hexo generate</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-部署到-GitHub-Pages"><a href="#2-部署到-GitHub-Pages" class="headerlink" title="2. 部署到 GitHub Pages"></a>2. 部署到 GitHub Pages</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 安装部署插件</span></span><br><span class="line">npm install hexo-deployer-git --save</span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置</span></span><br><span class="line">deploy:</span><br><span class="line">  <span class="built_in">type</span>: git</span><br><span class="line">  repo: https://github.com/ahzlll/ahzlll.github.io.git</span><br><span class="line">  branch: master</span><br><span class="line"></span><br><span class="line"><span class="comment"># 部署</span></span><br><span class="line">hexo deploy</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-自动化部署"><a href="#3-自动化部署" class="headerlink" title="3. 自动化部署"></a>3. 自动化部署</h3><p>可以使用 GitHub Actions 实现自动化部署：</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">name:</span> <span class="string">Deploy</span> <span class="string">Blog</span></span><br><span class="line"></span><br><span class="line"><span class="attr">on:</span></span><br><span class="line">  <span class="attr">push:</span></span><br><span class="line">    <span class="attr">branches:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">source</span></span><br><span class="line"></span><br><span class="line"><span class="attr">jobs:</span></span><br><span class="line">  <span class="attr">deploy:</span></span><br><span class="line">    <span class="attr">runs-on:</span> <span class="string">ubuntu-latest</span></span><br><span class="line">    <span class="attr">steps:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">uses:</span> <span class="string">actions/checkout@v2</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">uses:</span> <span class="string">actions/setup-node@v2</span></span><br><span class="line">        <span class="attr">with:</span></span><br><span class="line">          <span class="attr">node-version:</span> <span class="string">&#x27;16&#x27;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">run:</span> <span class="string">npm</span> <span class="string">install</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">run:</span> <span class="string">hexo</span> <span class="string">generate</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">run:</span> <span class="string">hexo</span> <span class="string">deploy</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="使用体验"><a href="#使用体验" class="headerlink" title="使用体验"></a>使用体验</h2><h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><ol>
+<li><strong>写作简单</strong>：Markdown 语法，专注内容</li>
+<li><strong>部署方便</strong>：一键部署到 GitHub Pages</li>
+<li><strong>主题丰富</strong>：Butterfly 主题功能完善</li>
+<li><strong>性能优秀</strong>：静态站点，访问速度快</li>
+<li><strong>SEO友好</strong>：搜索引擎容易索引</li>
+</ol>
+<h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><ol>
+<li><strong>需要本地环境</strong>：需要安装 Node.js</li>
+<li><strong>更新需要重新生成</strong>：每次更新需要重新生成静态文件</li>
+<li><strong>评论功能</strong>：需要第三方服务（如 Valine、Gitalk）</li>
+</ol>
+<h2 id="未来计划"><a href="#未来计划" class="headerlink" title="未来计划"></a>未来计划</h2><ol>
+<li><strong>内容优化</strong>：持续输出高质量的技术文章</li>
+<li><strong>功能完善</strong>：添加评论、搜索等功能</li>
+<li><strong>性能优化</strong>：优化加载速度，提升用户体验</li>
+<li><strong>SEO优化</strong>：提升搜索引擎排名</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>搭建个人博客是一个很好的学习过程，不仅能记录技术成长，还能锻炼写作能力。Hexo + Butterfly 是一个很好的选择，简单易用，功能丰富。</p>
+<p>如果你也想搭建个人博客，可以参考我的配置：</p>
+<ul>
+<li>博客地址：<a href="https://ahzlll.github.io/">https://ahzlll.github.io</a></li>
+<li>项目地址：<a href="https://github.com/ahzlll/ahzlll.github.io">https://github.com/ahzlll/ahzlll.github.io</a></li>
+</ul>
+<hr>
+<p><strong>写在最后</strong>：博客搭建只是第一步，更重要的是持续输出有价值的内容（虽然不知道能坚持多久 😅）。希望自己能坚持下去，记录技术成长，分享开发经验。如果文章有错误，欢迎指正！</p>
+]]></content>
+      <categories>
+        <category>技术学习</category>
+      </categories>
+      <tags>
+        <tag>随笔</tag>
+        <tag>Hexo</tag>
+        <tag>Butterfly</tag>
+        <tag>博客</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Hello World</title>
     <url>/2024/11/03/hello-world/</url>
     <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
@@ -87,7 +256,7 @@
 <li><strong>主动下线</strong>：<code>verifyToken</code> 失败时直接抛异常，这样用户在别的设备登录会触发旧 Token 失效；</li>
 <li><strong>超时续期</strong>：每次验证成功后刷新过期时间，用户只要活跃就不会被踢。</li>
 </ul>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次查了不少资料让我理解了“登录态&#x3D;如何安全记住用户”。原生 Session 在单机调试还行，但遇到多端、多实例就力不从心，更别说以后上线部署（可能有吧 。Redis + Token 虽然多写了点代码，却解决了刷新、重启、分布式和主动失效的问题。下一篇继续记录在这个项目也算是督促自己进步了，希望还能坚持写下去。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次查了不少资料让我理解了“登录态&#x3D;如何安全记住用户”。原生 Session 在单机调试还行，但遇到多端、多实例就力不从心，更别说以后上线部署（可能有吧 。Redis + Token 虽然多写了点代码，却解决了刷新、重启、分布式和主动失效的问题。下一篇正常还会继续记录这个项目，也算是督促自己进步了，希望还能坚持写下去。</p>
 ]]></content>
       <categories>
         <category>Debug 经验</category>
@@ -96,50 +265,6 @@
         <tag>后端开发</tag>
         <tag>Session</tag>
         <tag>Redis</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>用户中心项目踩坑记：密码加密那些事儿</title>
-    <url>/2024/11/15/2024-11-15-password-security/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>这是我做的第一个项目。前几天我对安全的理解只停留在“别写出 bug 就行”。直到在测试数据库时，亲眼看到 <code>user_password</code> 字段里躺着一串串明文密码，才想起之前刷到的视频里一句话：“明文密码 &#x3D; 红线”。本文记录我从明文存储到使用 BCrypt 的全过程，留给也在苦苦写项目的同学做参考。</p>
-<h2 id="问题爆发：数据库里的“裸奔”密码"><a href="#问题爆发：数据库里的“裸奔”密码" class="headerlink" title="问题爆发：数据库里的“裸奔”密码"></a>问题爆发：数据库里的“裸奔”密码</h2><p>项目初期我只想先跑通流程，直接把前端传来的密码丢进数据库。控制层代码大概是这样：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 错误示范，请勿模仿</span></span><br><span class="line"><span class="meta">@PostMapping(&quot;/register&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">register</span><span class="params">(<span class="meta">@RequestBody</span> User user)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (user.getPassword().length() &lt; <span class="number">8</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.error(<span class="string">&quot;密码长度不足&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    userMapper.insert(user); <span class="comment">// 直接存明文</span></span><br><span class="line">    <span class="keyword">return</span> Result.success();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>当我用 Navicat 打开数据表，<code>&quot;12345678&quot;</code>、<code>&quot;abcdefg&quot;</code> 等弱密码全在里面。此刻我才意识到：如果数据库被拖库，所有用户账号都会暴露。</p>
-<h2 id="解决过程：BCrypt-的救赎"><a href="#解决过程：BCrypt-的救赎" class="headerlink" title="解决过程：BCrypt 的救赎"></a>解决过程：BCrypt 的救赎</h2><h3 id="1-选型"><a href="#1-选型" class="headerlink" title="1. 选型"></a>1. 选型</h3><p>查资料后锁定几个常见方案：</p>
-<ul>
-<li><code>MD5</code>：不可逆，但彩虹表和 GPU 暴力破解太快；</li>
-<li><code>SHA</code>：同样属于快速哈希，对密码保护不够；</li>
-<li><code>BCrypt</code>：自带盐值，计算慢，可拖慢暴力破解。</li>
-</ul>
-<p>结合 Spring 生态，我直接使用 <code>BCryptPasswordEncoder</code>，不必自己维护盐值，整合也很顺。</p>
-<h3 id="2-代码改造"><a href="#2-代码改造" class="headerlink" title="2. 代码改造"></a>2. 代码改造</h3><p><strong>引入依赖</strong></p>
-<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-security<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>注册加密 Bean</strong></p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SecurityConfig</span> &#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> PasswordEncoder <span class="title function_">passwordEncoder</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">BCryptPasswordEncoder</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>改造注册 &#x2F; 登录逻辑</strong></p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">UserServiceImpl</span> <span class="keyword">implements</span> <span class="title class_">UserService</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> PasswordEncoder passwordEncoder;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">register</span><span class="params">(User user)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">encodedPassword</span> <span class="operator">=</span> passwordEncoder.encode(user.getPassword());</span><br><span class="line">        user.setPassword(encodedPassword);</span><br><span class="line">        userMapper.insert(user);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> User <span class="title function_">login</span><span class="params">(String account, String password)</span> &#123;</span><br><span class="line">        <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userMapper.selectByAccount(account);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;用户不存在&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!passwordEncoder.matches(password, user.getPassword())) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;密码错误&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> user;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="3-新坑：字段长度不够"><a href="#3-新坑：字段长度不够" class="headerlink" title="3. 新坑：字段长度不够"></a>3. 新坑：字段长度不够</h3><p>BCrypt 生成的哈希大约 60 个字符，而我的 <code>user_password</code> 是 <code>varchar(50)</code>。插入时报错，只能赶紧迁表：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">ALTER TABLE</span> <span class="keyword">user</span></span><br><span class="line">MODIFY <span class="keyword">COLUMN</span> user_password <span class="type">VARCHAR</span>(<span class="number">60</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;密码哈希&#x27;</span>;</span><br></pre></td></tr></table></figure>
-
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次踩坑的收获：</p>
-<ul>
-<li>明文密码绝对不能入库，BCrypt 是上手友好的方案；</li>
-<li>哈希字符串会更长，库表字段要预留空间；</li>
-<li>善用框架提供的工具，别重复造轮子。</li>
-</ul>
-<p>下一篇我应该还会记录在这个项目遇到的其他问题，希望还能坚持写下去，欢迎催更！</p>
-]]></content>
-      <categories>
-        <category>Debug 经验</category>
-      </categories>
-      <tags>
-        <tag>后端开发</tag>
-        <tag>安全</tag>
-        <tag>Spring Boot</tag>
       </tags>
   </entry>
 </search>
