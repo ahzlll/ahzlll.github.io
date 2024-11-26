@@ -30,7 +30,7 @@
       </tags>
   </entry>
   <entry>
-    <title>用户中心项目踩坑记：密码加密那些事儿</title>
+    <title>用户中心项目踩坑记 1 ：密码加密那些事儿</title>
     <url>/2024/11/15/2024-11-15-password-security/</url>
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>这是我做的第一个项目。前几天我对安全的理解只停留在“别写出 bug 就行”。直到在测试数据库时，亲眼看到 <code>user_password</code> 字段里躺着一串串明文密码，才想起之前刷到的视频里一句话：“明文密码 &#x3D; 红线”。本文记录我从明文存储到使用 BCrypt 的全过程，留给也在苦苦写项目的同学做参考。</p>
 <h2 id="问题爆发：数据库里的“裸奔”密码"><a href="#问题爆发：数据库里的“裸奔”密码" class="headerlink" title="问题爆发：数据库里的“裸奔”密码"></a>问题爆发：数据库里的“裸奔”密码</h2><p>项目初期我只想先跑通流程，直接把前端传来的密码丢进数据库。控制层代码大概是这样：</p>
@@ -63,6 +63,12 @@
 <li>善用框架提供的工具，别重复造轮子。</li>
 </ul>
 <p>下一篇我应该还会记录在这个项目遇到的其他问题，希望还能坚持写下去，欢迎催更！</p>
+<hr>
+<h2 id="更新-–-相关文章"><a href="#更新-–-相关文章" class="headerlink" title="更新 – 相关文章"></a>更新 – 相关文章</h2><p>这个用户中心项目系列的其他文章：</p>
+<ul>
+<li><a href="/2024/11/20/2024-11-20-login-session/">用户中心项目踩坑记 2 ：登录态管理的那些坑</a></li>
+<li><a href="/2024/11/26/2024-11-26-user-center-database-design/">用户中心项目的数据库设计：常见问题与解决方案</a></li>
+</ul>
 ]]></content>
       <categories>
         <category>Debug 经验</category>
@@ -199,54 +205,188 @@
       </tags>
   </entry>
   <entry>
-    <title>用户中心项目踩坑记：登录态管理的那些坑</title>
-    <url>/2024/11/20/2024-11-20-login-session/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>项目又又又有问题，浏览器刷新一下就得重新登录，手机和电脑也无法共享状态。作为一个大二学生，只能说完全就是啥也不会，只能一点点地查资料。本文记录我如何把零散的 Session 改成基于 Redis 的 Token 方案，希望给也在自学的同学一点参考。</p>
-<h2 id="问题现象：登录态“稍纵即逝”"><a href="#问题现象：登录态“稍纵即逝”" class="headerlink" title="问题现象：登录态“稍纵即逝”"></a>问题现象：登录态“稍纵即逝”</h2><p>最开始我直接用 Spring Boot 自带的 <code>HttpSession</code> 保存用户对象：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request, HttpSession session)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    session.setAttribute(<span class="string">&quot;user&quot;</span>, user); <span class="comment">// 明明存了，但总丢</span></span><br><span class="line">    <span class="keyword">return</span> Result.success(user);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>随之暴露了三个痛点：</p>
-<ol>
-<li>前端用 React，刷新页面后 Session 丢失，用户得重新登录（本地两个浏览器窗口就能稳定复现）；</li>
-<li>我重启后端服务，所有用户全被踢下线（开发环境重启一次就得重新登录一遍）；</li>
-<li>同一账号 PC 登录后，手机端完全感知不到状态（我用同一 Wi-Fi 下的手机访问本地调试地址验证的）。</li>
-</ol>
-<h2 id="解决过程：Redis-Token"><a href="#解决过程：Redis-Token" class="headerlink" title="解决过程：Redis + Token"></a>解决过程：Redis + Token</h2><h3 id="1-技术选型"><a href="#1-技术选型" class="headerlink" title="1. 技术选型"></a>1. 技术选型</h3><p>我调研了三种方案：</p>
+    <title>用户中心项目的数据库设计：常见问题与解决方案</title>
+    <url>/2024/11/26/2024-11-26-user-center-database-design/</url>
+    <content><![CDATA[<p>用户中心是几乎所有 Web 应用的核心模块，负责用户注册、登录、信息管理等关键功能。我在学习后端开发时发现，设计一个用户中心的数据库并不像想象中那么简单。今天想和大家分享一些我在学习过程中遇到的问题，以及找到的解决方案。虽然我还在学习中，但这些经验希望能帮助到同样刚入门的朋友们。</p>
+<h2 id="一、用户表设计的核心问题"><a href="#一、用户表设计的核心问题" class="headerlink" title="一、用户表设计的核心问题"></a>一、用户表设计的核心问题</h2><h3 id="1-主键选择困境"><a href="#1-主键选择困境" class="headerlink" title="1. 主键选择困境"></a>1. 主键选择困境</h3><p><strong>问题描述</strong>：刚开始设计用户表时，我遇到了第一个问题：用户 ID 应该用什么类型？是自增的整数（1, 2, 3…）还是 UUID（一串随机字符）？用 INT 还是 BIGINT？</p>
+<p><strong>解决方案</strong>：</p>
+<p>对于初学者来说，我建议先用 <code>INT AUTO_INCREMENT</code>，原因很简单：</p>
 <ul>
-<li><strong>原生 Session</strong>：依赖单机内存，重启或多实例时会混乱；</li>
-<li><strong>JWT</strong>：无状态但无法主动失效，对我现在的需求来说不好控制；</li>
-<li><strong>Redis + Token</strong>：登录后生成 Token，把用户信息放到 Redis，可控可失效，还能扩展到多节点。</li>
+<li><strong>简单易懂</strong>：数据库会自动帮你生成 1, 2, 3… 这样的 ID</li>
+<li><strong>查询快</strong>：整数比较比字符串快很多</li>
+<li><strong>够用了</strong>：INT 类型最大可以存到 21 亿多，对于学习项目完全够用</li>
 </ul>
-<p>综合复杂度和可维护性，我选择第三种。</p>
-<h3 id="2-引入-Redis-依赖"><a href="#2-引入-Redis-依赖" class="headerlink" title="2. 引入 Redis 依赖"></a>2. 引入 Redis 依赖</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE TABLE</span> `<span class="keyword">user</span>` (</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT COMMENT <span class="string">&#x27;用户ID&#x27;</span>,</span><br><span class="line">  <span class="comment">-- 其他字段...</span></span><br><span class="line">) ENGINE<span class="operator">=</span>InnoDB <span class="keyword">DEFAULT</span> CHARSET<span class="operator">=</span>utf8mb4 COMMENT<span class="operator">=</span><span class="string">&#x27;用户表&#x27;</span>;</span><br></pre></td></tr></table></figure>
 
-<h3 id="3-配置-Redis-连接"><a href="#3-配置-Redis-连接" class="headerlink" title="3. 配置 Redis 连接"></a>3. 配置 Redis 连接</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">localhost</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
-
-<p>本地用 Docker 起了一个 Redis，正式环境也能直接复用配置。</p>
-<h3 id="4-Token-工具类"><a href="#4-Token-工具类" class="headerlink" title="4. Token 工具类"></a>4. Token 工具类</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TokenUtils</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">generateToken</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;USER_TOKEN:&quot;</span> + UUID.randomUUID().toString().replace(<span class="string">&quot;-&quot;</span>, <span class="string">&quot;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">storeToken</span><span class="params">(String token, UserDTO user)</span> &#123;</span><br><span class="line">        redisTemplate.opsForValue().set(token,</span><br><span class="line">                JSON.toJSONString(user),</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                TimeUnit.HOURS);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> UserDTO <span class="title function_">verifyToken</span><span class="params">(String token)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">userJson</span> <span class="operator">=</span> redisTemplate.opsForValue().get(token);</span><br><span class="line">        <span class="keyword">if</span> (userJson == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        redisTemplate.expire(token, <span class="number">2</span>, TimeUnit.HOURS);</span><br><span class="line">        <span class="keyword">return</span> JSON.parseObject(userJson, UserDTO.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>我在这里刻意用了 <code>UserDTO</code>，把密码哈希等敏感字段去掉，避免 Redis 里存全量对象。虽然暂时还没部署，但趁早把敏感字段剥离掉也能避免后面迁移时手忙脚乱。</p>
-<h3 id="5-改造登录接口"><a href="#5-改造登录接口" class="headerlink" title="5. 改造登录接口"></a>5. 改造登录接口</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    <span class="type">UserDTO</span> <span class="variable">safeUser</span> <span class="operator">=</span> UserConvertor.toDTO(user);</span><br><span class="line">    <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> tokenUtils.generateToken(user.getId());</span><br><span class="line">    tokenUtils.storeToken(token, safeUser);</span><br><span class="line">    <span class="keyword">return</span> Result.success(<span class="keyword">new</span> <span class="title class_">LoginResponse</span>(token, safeUser));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>前端拿到 Token 后写入 <code>localStorage</code>，请求时放到 <code>Authorization</code> 头里。现阶段只是我自己在浏览器里调试，但等以后部署到测试环境只需要把基址调一下就能继续沿用。</p>
-<h3 id="6-拦截器校验登录态"><a href="#6-拦截器校验登录态" class="headerlink" title="6. 拦截器校验登录态"></a>6. 拦截器校验登录态</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">LoginInterceptor</span> <span class="keyword">implements</span> <span class="title class_">HandlerInterceptor</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> TokenUtils tokenUtils;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request,</span></span><br><span class="line"><span class="params">                             HttpServletResponse response,</span></span><br><span class="line"><span class="params">                             Object handler)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;Authorization&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.hasText(token)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;未登录&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> tokenUtils.verifyToken(token);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;登录已过期&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        UserContext.set(user); <span class="comment">// ThreadLocal 保存，方便后续获取</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>在 <code>WebMvcConfigurer</code> 里把拦截器注册到需要鉴权的接口即可。</p>
-<h2 id="踩坑记录"><a href="#踩坑记录" class="headerlink" title="踩坑记录"></a>踩坑记录</h2><ul>
-<li><strong>Token 传递方式</strong>：最早放在 URL 查询参数，刷新和复制链接都会泄露，最后改成 <code>Authorization</code> 头；</li>
-<li><strong>Redis 序列化</strong>：默认 <code>JdkSerializationRedisSerializer</code> 让 Key 出现乱码，我统一改用 <code>StringRedisTemplate</code> + JSON；</li>
-<li><strong>主动下线</strong>：<code>verifyToken</code> 失败时直接抛异常，这样用户在别的设备登录会触发旧 Token 失效；</li>
-<li><strong>超时续期</strong>：每次验证成功后刷新过期时间，用户只要活跃就不会被踢。</li>
+<p><strong>我的理解</strong>：就像给每个学生分配学号一样，自增 ID 简单直接。除非你的应用真的需要支持超过 21 亿用户（这几乎不可能），否则不需要用 BIGINT。UUID 虽然能隐藏用户数量，但会让查询变慢，初学者不建议使用。</p>
+<h3 id="2-多登录方式的兼容问题"><a href="#2-多登录方式的兼容问题" class="headerlink" title="2. 多登录方式的兼容问题"></a>2. 多登录方式的兼容问题</h3><p><strong>问题描述</strong>：现在的应用通常支持用户名、手机号、邮箱甚至第三方账号（微信、QQ）登录。刚开始我直接把所有字段都塞到用户表里，结果表变得特别乱。</p>
+<p><strong>解决方案</strong>：</p>
+<ul>
+<li><strong>主表放常用字段</strong>：用户名、邮箱、手机号这些常用的登录方式放在主表</li>
+<li><strong>第三方登录单独放</strong>：微信、QQ 这些第三方登录信息放在另一个表，用 <code>user_id</code> 关联起来</li>
+<li><strong>用 UNIQUE 保证唯一</strong>：确保每个邮箱、手机号只能注册一次</li>
 </ul>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次查了不少资料让我理解了“登录态&#x3D;如何安全记住用户”。原生 Session 在单机调试还行，但遇到多端、多实例就力不从心，更别说以后上线部署（可能有吧 。Redis + Token 虽然多写了点代码，却解决了刷新、重启、分布式和主动失效的问题。下一篇正常还会继续记录这个项目，也算是督促自己进步了，希望还能坚持写下去。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 主用户表（存放基本信息）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `<span class="keyword">user</span>` (</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `username` <span class="type">VARCHAR</span>(<span class="number">50</span>) <span class="keyword">UNIQUE</span> COMMENT <span class="string">&#x27;用户名&#x27;</span>,</span><br><span class="line">  `email` <span class="type">VARCHAR</span>(<span class="number">100</span>) <span class="keyword">UNIQUE</span> COMMENT <span class="string">&#x27;邮箱&#x27;</span>,</span><br><span class="line">  `phone` <span class="type">VARCHAR</span>(<span class="number">20</span>) <span class="keyword">UNIQUE</span> COMMENT <span class="string">&#x27;手机号&#x27;</span>,</span><br><span class="line">  `password_hash` <span class="type">CHAR</span>(<span class="number">60</span>) COMMENT <span class="string">&#x27;密码哈希(bcrypt)&#x27;</span>,</span><br><span class="line">  `status` ENUM(<span class="string">&#x27;active&#x27;</span>, <span class="string">&#x27;inactive&#x27;</span>, <span class="string">&#x27;banned&#x27;</span>) <span class="keyword">DEFAULT</span> <span class="string">&#x27;inactive&#x27;</span>,</span><br><span class="line">  `created_at` DATETIME <span class="keyword">DEFAULT</span> <span class="built_in">CURRENT_TIMESTAMP</span>,</span><br><span class="line">  INDEX `idx_email` (`email`),    <span class="comment">-- 给邮箱建索引，登录时查得快</span></span><br><span class="line">  INDEX `idx_phone` (`phone`)     <span class="comment">-- 给手机号建索引，登录时查得快</span></span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;用户基本信息表&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 第三方登录关联表（存放微信、QQ等登录信息）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `user_oauth` (</span><br><span class="line">  `id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  `provider` ENUM(<span class="string">&#x27;wechat&#x27;</span>, <span class="string">&#x27;qq&#x27;</span>, <span class="string">&#x27;github&#x27;</span>, <span class="string">&#x27;google&#x27;</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;登录方式&#x27;</span>,</span><br><span class="line">  `provider_user_id` <span class="type">VARCHAR</span>(<span class="number">100</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;第三方平台的用户ID&#x27;</span>,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`user_id`) <span class="keyword">REFERENCES</span> `<span class="keyword">user</span>`(`user_id`) <span class="keyword">ON</span> <span class="keyword">DELETE</span> CASCADE,</span><br><span class="line">  <span class="keyword">UNIQUE</span> KEY `uk_provider_user` (`provider`, `provider_user_id`)</span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;第三方登录关联表&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>简单解释</strong>：</p>
+<ul>
+<li><code>UNIQUE</code>：保证这个字段的值不能重复（比如不能有两个相同的邮箱）</li>
+<li><code>INDEX</code>：索引就像书的目录，能让你快速找到想要的数据</li>
+<li><code>FOREIGN KEY</code>：外键，保证 <code>user_oauth</code> 表中的 <code>user_id</code> 必须在 <code>user</code> 表中存在</li>
+<li><code>ON DELETE CASCADE</code>：如果用户被删除了，相关的第三方登录信息也会自动删除</li>
+</ul>
+<h2 id="二、用户信息管理的挑战"><a href="#二、用户信息管理的挑战" class="headerlink" title="二、用户信息管理的挑战"></a>二、用户信息管理的挑战</h2><h3 id="1-用户资料的扩展性问题"><a href="#1-用户资料的扩展性问题" class="headerlink" title="1. 用户资料的扩展性问题"></a>1. 用户资料的扩展性问题</h3><p><strong>问题描述</strong>：刚开始我只在用户表里放了用户名和密码，后来想加头像、性别、生日…每次都要改表结构，特别麻烦。而且如果以后还要加更多字段，表会变得越来越大。</p>
+<p><strong>解决方案</strong>：</p>
+<p>我的做法是分表存储：</p>
+<ul>
+<li><strong>主表放核心信息</strong>：用户名、密码这些登录必需的信息</li>
+<li><strong>扩展表放详细信息</strong>：头像、性别、生日这些放在另一个表</li>
+<li><strong>动态属性表</strong>：如果以后还要加一些不常用的字段，可以用键值对的方式存储</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 用户扩展信息表（存放头像、性别、生日等）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `user_profile` (</span><br><span class="line">  `profile_id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  `avatar_url` <span class="type">VARCHAR</span>(<span class="number">255</span>) COMMENT <span class="string">&#x27;头像URL&#x27;</span>,</span><br><span class="line">  `gender` ENUM(<span class="string">&#x27;male&#x27;</span>, <span class="string">&#x27;female&#x27;</span>, <span class="string">&#x27;unknown&#x27;</span>) <span class="keyword">DEFAULT</span> <span class="string">&#x27;unknown&#x27;</span> COMMENT <span class="string">&#x27;性别&#x27;</span>,</span><br><span class="line">  `birthday` <span class="type">DATE</span> COMMENT <span class="string">&#x27;生日&#x27;</span>,</span><br><span class="line">  `bio` TEXT COMMENT <span class="string">&#x27;个人简介&#x27;</span>,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`user_id`) <span class="keyword">REFERENCES</span> `<span class="keyword">user</span>`(`user_id`) <span class="keyword">ON</span> <span class="keyword">DELETE</span> CASCADE,</span><br><span class="line">  <span class="keyword">UNIQUE</span> KEY `uk_user_id` (`user_id`)  <span class="comment">-- 一个用户只有一条资料</span></span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;用户详细资料表&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 动态属性表（如果以后要加一些不常用的字段，可以用这个表）</span></span><br><span class="line"><span class="comment">-- 比如：用户喜欢的颜色、座右铭等，不需要单独建字段</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `user_attribute` (</span><br><span class="line">  `id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  `attr_key` <span class="type">VARCHAR</span>(<span class="number">50</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;属性名，比如&quot;favorite_color&quot;&#x27;</span>,</span><br><span class="line">  `attr_value` TEXT COMMENT <span class="string">&#x27;属性值，比如&quot;蓝色&quot;&#x27;</span>,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`user_id`) <span class="keyword">REFERENCES</span> `<span class="keyword">user</span>`(`user_id`) <span class="keyword">ON</span> <span class="keyword">DELETE</span> CASCADE,</span><br><span class="line">  <span class="keyword">UNIQUE</span> KEY `uk_user_attr` (`user_id`, `attr_key`)  <span class="comment">-- 一个用户的同一个属性只能有一条</span></span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;用户动态属性表&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>为什么要分表？</strong></p>
+<ul>
+<li>主表查询频繁（登录时要用），字段少查询快</li>
+<li>扩展信息不常查询，分开存储不会影响登录性能</li>
+<li>以后要加新字段，只需要改扩展表，不用动主表</li>
+</ul>
+<h3 id="2-隐私设置的灵活控制"><a href="#2-隐私设置的灵活控制" class="headerlink" title="2. 隐私设置的灵活控制"></a>2. 隐私设置的灵活控制</h3><p><strong>问题描述</strong>：有些用户希望手机号只有自己能看到，有些用户希望生日对好友可见。如果每个隐私设置都单独建字段，会很麻烦。</p>
+<p><strong>解决方案</strong>：用一个独立的隐私设置表，可以灵活控制每个字段的可见性：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE TABLE</span> `user_privacy` (</span><br><span class="line">  `privacy_id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  `field` ENUM(<span class="string">&#x27;profile&#x27;</span>, <span class="string">&#x27;email&#x27;</span>, <span class="string">&#x27;phone&#x27;</span>, <span class="string">&#x27;birthday&#x27;</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;要设置隐私的字段&#x27;</span>,</span><br><span class="line">  `visibility` ENUM(<span class="string">&#x27;public&#x27;</span>, <span class="string">&#x27;friends&#x27;</span>, <span class="string">&#x27;private&#x27;</span>) <span class="keyword">DEFAULT</span> <span class="string">&#x27;private&#x27;</span> COMMENT <span class="string">&#x27;可见性：公开/仅好友/仅自己&#x27;</span>,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`user_id`) <span class="keyword">REFERENCES</span> `<span class="keyword">user</span>`(`user_id`) <span class="keyword">ON</span> <span class="keyword">DELETE</span> CASCADE,</span><br><span class="line">  <span class="keyword">UNIQUE</span> KEY `uk_user_field` (`user_id`, `field`)  <span class="comment">-- 一个用户的同一个字段只能有一条设置</span></span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;用户隐私设置表&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>使用示例</strong>：</p>
+<ul>
+<li>用户A设置手机号为 <code>private</code>（仅自己可见）</li>
+<li>用户B设置生日为 <code>friends</code>（仅好友可见）</li>
+<li>用户C设置个人资料为 <code>public</code>（所有人可见）</li>
+</ul>
+<h2 id="三、性能与安全优化"><a href="#三、性能与安全优化" class="headerlink" title="三、性能与安全优化"></a>三、性能与安全优化</h2><h3 id="1-登录性能优化"><a href="#1-登录性能优化" class="headerlink" title="1. 登录性能优化"></a>1. 登录性能优化</h3><p><strong>问题描述</strong>：登录是用户最常用的功能，如果每次登录都要等很久，用户体验会很差。刚开始我的表没有建索引，登录时数据库要扫描整个表，特别慢。</p>
+<p><strong>解决方案</strong>：</p>
+<ul>
+<li><strong>建索引</strong>：给邮箱、手机号这些登录字段建索引，就像给书加目录，查起来快很多</li>
+<li><strong>用缓存</strong>：登录成功后把用户信息存到 Redis，下次查询直接从缓存取，不用查数据库</li>
+<li><strong>记录登录日志</strong>：记录每次登录的信息，方便以后分析（比如发现异常登录）</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 登录日志表（记录每次登录的信息，方便以后分析）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `user_login_log` (</span><br><span class="line">  `log_id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  `login_time` DATETIME <span class="keyword">DEFAULT</span> <span class="built_in">CURRENT_TIMESTAMP</span> COMMENT <span class="string">&#x27;登录时间&#x27;</span>,</span><br><span class="line">  `ip_address` <span class="type">VARCHAR</span>(<span class="number">45</span>) COMMENT <span class="string">&#x27;IP地址（可以用来发现异常登录）&#x27;</span>,</span><br><span class="line">  `user_agent` TEXT COMMENT <span class="string">&#x27;客户端信息（用的什么浏览器、什么设备）&#x27;</span>,</span><br><span class="line">  `login_result` ENUM(<span class="string">&#x27;success&#x27;</span>, <span class="string">&#x27;fail&#x27;</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;登录结果：成功/失败&#x27;</span>,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`user_id`) <span class="keyword">REFERENCES</span> `<span class="keyword">user</span>`(`user_id`) <span class="keyword">ON</span> <span class="keyword">DELETE</span> CASCADE,</span><br><span class="line">  INDEX `idx_user_time` (`user_id`, `login_time`)  <span class="comment">-- 按用户和时间查日志时用</span></span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;用户登录日志表&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>基于 Redis 的 Token 方案</strong>（如果还没学 Redis，可以先跳过这部分）：</p>
+<p>我使用了基于 Redis 的 Token 方案来管理登录态（详细实现见<a href="/2024/11/20/2024-11-20-login-session/">《用户中心项目踩坑记 2：登录态管理的那些坑》</a>）。这个方案不仅能缓存用户信息，还能解决多端登录、服务重启等问题。</p>
+<p><strong>核心思路</strong>：</p>
+<ul>
+<li>登录成功后生成 Token，把用户信息（脱敏后的 <code>UserDTO</code>）存到 Redis</li>
+<li>Token 作为 Key，用户信息作为 Value，设置 2 小时过期时间</li>
+<li>每次验证 Token 时自动续期，用户只要活跃就不会被踢下线</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TokenUtils</span> &#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 生成 Token（格式：USER_TOKEN:随机UUID）</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">generateToken</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;USER_TOKEN:&quot;</span> + UUID.randomUUID().toString().replace(<span class="string">&quot;-&quot;</span>, <span class="string">&quot;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 存储 Token 和用户信息到 Redis（2小时过期）</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">storeToken</span><span class="params">(String token, UserDTO user)</span> &#123;</span><br><span class="line">        redisTemplate.opsForValue().set(token,</span><br><span class="line">                JSON.toJSONString(user),  <span class="comment">// 存储脱敏后的用户信息</span></span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                TimeUnit.HOURS);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 验证 Token 并自动续期</span></span><br><span class="line">    <span class="keyword">public</span> UserDTO <span class="title function_">verifyToken</span><span class="params">(String token)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">userJson</span> <span class="operator">=</span> redisTemplate.opsForValue().get(token);</span><br><span class="line">        <span class="keyword">if</span> (userJson == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;  <span class="comment">// Token 不存在或已过期</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 验证成功后自动续期（刷新过期时间为2小时）</span></span><br><span class="line">        redisTemplate.expire(token, <span class="number">2</span>, TimeUnit.HOURS);</span><br><span class="line">        <span class="keyword">return</span> JSON.parseObject(userJson, UserDTO.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>为什么用 Redis 而不是数据库？</strong></p>
+<ul>
+<li><strong>性能</strong>：Redis 是内存数据库，查询速度比 MySQL 快很多</li>
+<li><strong>分布式支持</strong>：多个服务实例可以共享同一个 Redis，实现多端登录</li>
+<li><strong>自动过期</strong>：Redis 支持设置过期时间，Token 到期自动删除，不用手动清理</li>
+<li><strong>减轻数据库压力</strong>：登录态验证是高频操作，用 Redis 可以大大减少数据库查询</li>
+</ul>
+<p><strong>注意事项</strong>：</p>
+<ul>
+<li>存储的是 <code>UserDTO</code>（脱敏后的用户信息），不要存完整的 <code>User</code> 对象（避免泄露密码哈希等敏感信息）</li>
+<li>Token 验证成功后要自动续期，这样用户只要活跃就不会被踢下线</li>
+<li>如果用户在其他设备登录，可以让旧 Token 失效（实现单点登录）</li>
+</ul>
+<p><strong>为什么需要登录日志？</strong></p>
+<ul>
+<li>可以分析用户登录习惯（比如什么时间登录最多）</li>
+<li>发现异常登录（比如同一个账号在不同城市登录）</li>
+<li>如果账号被盗，可以通过日志追踪</li>
+</ul>
+<h3 id="2-密码安全存储"><a href="#2-密码安全存储" class="headerlink" title="2. 密码安全存储"></a>2. 密码安全存储</h3><p><strong>问题描述</strong>：这是最重要的一点！密码绝对不能明文存储。如果数据库被泄露，明文密码会让所有用户账号都暴露。即使是用 MD5 简单哈希也不安全，因为 MD5 已经被破解了，很容易被暴力破解。</p>
+<p><strong>解决方案</strong>：</p>
+<ul>
+<li><strong>使用 bcrypt 哈希</strong>：这是目前最安全的密码存储方式（注意：是哈希不是加密，哈希是不可逆的）</li>
+<li><strong>永远不存明文</strong>：密码经过哈希后，就永远不能还原成原始密码（这是好事！）</li>
+<li><strong>密码强度校验</strong>：要求用户设置强密码（至少8位，包含大小写字母和数字）</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 密码历史表（防止用户改密码时，又改回之前用过的密码）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `user_password_history` (</span><br><span class="line">  `id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  `password_hash` <span class="type">CHAR</span>(<span class="number">60</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;历史密码的哈希值&#x27;</span>,</span><br><span class="line">  `created_at` DATETIME <span class="keyword">DEFAULT</span> <span class="built_in">CURRENT_TIMESTAMP</span> COMMENT <span class="string">&#x27;使用这个密码的时间&#x27;</span>,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`user_id`) <span class="keyword">REFERENCES</span> `<span class="keyword">user</span>`(`user_id`) <span class="keyword">ON</span> <span class="keyword">DELETE</span> CASCADE,</span><br><span class="line">  INDEX `idx_user_id` (`user_id`)</span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;用户密码历史表&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>为什么需要密码历史表？</strong></p>
+<ul>
+<li>防止用户改密码时，又改回之前用过的旧密码（不安全）</li>
+<li>可以设置规则：新密码不能和最近2次用过的密码相同</li>
+</ul>
+<p><strong>bcrypt 的特点</strong>：</p>
+<ul>
+<li>哈希后的密码固定是 60 个字符</li>
+<li>每次哈希同一个密码，结果都不一样（但验证时能正确匹配）</li>
+<li>破解难度极高，是目前最安全的密码存储方式</li>
+</ul>
+<h2 id="四、常见业务场景解决方案"><a href="#四、常见业务场景解决方案" class="headerlink" title="四、常见业务场景解决方案"></a>四、常见业务场景解决方案</h2><h3 id="1-用户状态管理"><a href="#1-用户状态管理" class="headerlink" title="1. 用户状态管理"></a>1. 用户状态管理</h3><p><strong>问题描述</strong>：用户可能有不同的状态：刚注册还没激活、正常使用、被封禁、已注销。需要用一个字段来记录这些状态，而且要保证状态切换是安全的（比如不能随便封禁用户）。</p>
+<p><strong>解决方案</strong>：</p>
+<ul>
+<li><strong>用 ENUM 限制状态值</strong>：只能选择预设的几个状态，不能随便填</li>
+<li><strong>记录状态变更日志</strong>：谁在什么时候把用户状态改成了什么，都要记录下来</li>
+<li><strong>注销用逻辑删除</strong>：用户注销时，不直接删除数据，而是标记为”已删除”，这样数据还能恢复</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 在用户表添加状态字段</span></span><br><span class="line"><span class="keyword">ALTER TABLE</span> `<span class="keyword">user</span>` <span class="keyword">ADD</span> <span class="keyword">COLUMN</span> `status` ENUM(<span class="string">&#x27;pending&#x27;</span>, <span class="string">&#x27;active&#x27;</span>, <span class="string">&#x27;banned&#x27;</span>, <span class="string">&#x27;deleted&#x27;</span>) <span class="keyword">DEFAULT</span> <span class="string">&#x27;pending&#x27;</span>;</span><br><span class="line"><span class="comment">-- pending: 待激活（刚注册，还没验证邮箱/手机）</span></span><br><span class="line"><span class="comment">-- active: 正常使用</span></span><br><span class="line"><span class="comment">-- banned: 被封禁（违规了）</span></span><br><span class="line"><span class="comment">-- deleted: 已注销（用户自己注销的）</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 状态变更日志（记录每次状态变化）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `user_status_log` (</span><br><span class="line">  `id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  `old_status` ENUM(<span class="string">&#x27;pending&#x27;</span>, <span class="string">&#x27;active&#x27;</span>, <span class="string">&#x27;banned&#x27;</span>, <span class="string">&#x27;deleted&#x27;</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;旧状态&#x27;</span>,</span><br><span class="line">  `new_status` ENUM(<span class="string">&#x27;pending&#x27;</span>, <span class="string">&#x27;active&#x27;</span>, <span class="string">&#x27;banned&#x27;</span>, <span class="string">&#x27;deleted&#x27;</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;新状态&#x27;</span>,</span><br><span class="line">  `operated_by` <span class="type">INT</span> COMMENT <span class="string">&#x27;操作人ID（哪个管理员操作的）&#x27;</span>,</span><br><span class="line">  `operate_time` DATETIME <span class="keyword">DEFAULT</span> <span class="built_in">CURRENT_TIMESTAMP</span> COMMENT <span class="string">&#x27;操作时间&#x27;</span>,</span><br><span class="line">  `reason` TEXT COMMENT <span class="string">&#x27;变更原因（为什么要封禁这个用户）&#x27;</span>,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`user_id`) <span class="keyword">REFERENCES</span> `<span class="keyword">user</span>`(`user_id`) <span class="keyword">ON</span> <span class="keyword">DELETE</span> CASCADE</span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;用户状态变更日志&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>为什么要记录日志？</strong></p>
+<ul>
+<li>如果管理员误操作，可以通过日志恢复</li>
+<li>如果用户申诉，可以查看历史记录</li>
+<li>方便审计，知道谁在什么时候做了什么操作</li>
+</ul>
+<h3 id="2-权限与角色管理"><a href="#2-权限与角色管理" class="headerlink" title="2. 权限与角色管理"></a>2. 权限与角色管理</h3><p><strong>问题描述</strong>：如果系统有管理员、普通用户、VIP 用户等不同角色，每个角色能做的事情不一样。如果给每个用户单独设置权限，会很麻烦。比如有 1000 个普通用户，难道要设置 1000 次吗？</p>
+<p><strong>解决方案</strong>：采用 RBAC（基于角色的访问控制）模型。简单说就是：先定义角色（管理员、普通用户），再给角色分配权限，最后把用户分配给角色。这样管理起来方便很多。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 角色表（定义有哪些角色：管理员、普通用户、VIP等）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `role` (</span><br><span class="line">  `role_id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `role_name` <span class="type">VARCHAR</span>(<span class="number">50</span>) <span class="keyword">UNIQUE</span> <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;角色名称&#x27;</span>,</span><br><span class="line">  `description` TEXT COMMENT <span class="string">&#x27;角色描述&#x27;</span></span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;角色表&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 用户角色关联表（哪个用户属于哪个角色）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `user_role` (</span><br><span class="line">  `id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  `role_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`user_id`) <span class="keyword">REFERENCES</span> `<span class="keyword">user</span>`(`user_id`) <span class="keyword">ON</span> <span class="keyword">DELETE</span> CASCADE,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`role_id`) <span class="keyword">REFERENCES</span> `role`(`role_id`),</span><br><span class="line">  <span class="keyword">UNIQUE</span> KEY `uk_user_role` (`user_id`, `role_id`)  <span class="comment">-- 一个用户不能重复分配同一个角色</span></span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;用户角色关联表&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 权限表（定义有哪些权限：删除文章、封禁用户等）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `permission` (</span><br><span class="line">  `perm_id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `perm_code` <span class="type">VARCHAR</span>(<span class="number">100</span>) <span class="keyword">UNIQUE</span> <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;权限代码，比如&quot;article:delete&quot;&#x27;</span>,</span><br><span class="line">  `description` TEXT COMMENT <span class="string">&#x27;权限描述&#x27;</span></span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;权限表&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 角色权限关联表（哪个角色有哪些权限）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `role_permission` (</span><br><span class="line">  `id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT,</span><br><span class="line">  `role_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  `perm_id` <span class="type">INT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`role_id`) <span class="keyword">REFERENCES</span> `role`(`role_id`) <span class="keyword">ON</span> <span class="keyword">DELETE</span> CASCADE,</span><br><span class="line">  <span class="keyword">FOREIGN KEY</span> (`perm_id`) <span class="keyword">REFERENCES</span> `permission`(`perm_id`),</span><br><span class="line">  <span class="keyword">UNIQUE</span> KEY `uk_role_perm` (`role_id`, `perm_id`)  <span class="comment">-- 一个角色不能重复分配同一个权限</span></span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;角色权限关联表&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>使用示例</strong>：</p>
+<ol>
+<li>创建角色：管理员、普通用户</li>
+<li>给管理员分配权限：删除文章、封禁用户、查看所有数据</li>
+<li>给普通用户分配权限：发布文章、评论</li>
+<li>把用户A分配给”管理员”角色，用户B分配给”普通用户”角色</li>
+</ol>
+<p>这样，用户A自动拥有管理员的权限，用户B自动拥有普通用户的权限。如果以后要给普通用户增加新权限，只需要在 <code>role_permission</code> 表里加一条记录，所有普通用户就都有这个权限了。</p>
+<h2 id="五、设计原则总结"><a href="#五、设计原则总结" class="headerlink" title="五、设计原则总结"></a>五、设计原则总结</h2><p>作为初学者，我总结了几个重要的设计原则（不知道有没有什么问题 QAQ：</p>
+<ol>
+<li><strong>安全性优先</strong>：密码必须哈希存储（用 bcrypt），敏感信息要脱敏，重要操作要记录日志</li>
+<li><strong>不要过度设计</strong>：刚开始不需要考虑太多，先实现基本功能，等真正遇到问题再优化</li>
+<li><strong>分表存储</strong>：核心信息（登录用的）和扩展信息（个人资料）分开，这样查询更快</li>
+<li><strong>合理建索引</strong>：给经常查询的字段（邮箱、手机号）建索引，但不要建太多（会影响写入性能）</li>
+<li><strong>预留扩展空间</strong>：设计时想想以后可能会加什么功能，但不要想太多（容易过度设计）</li>
+<li><strong>保证数据一致性</strong>：用外键、唯一索引、事务来保证数据不会出错</li>
+</ol>
+<hr>
+<h2 id="六、学习感想"><a href="#六、学习感想" class="headerlink" title="六、学习感想"></a>六、学习感想</h2><p>我在学习数据库设计的过程中踩了不少坑，也学到了很多。想和大家分享几点感受：</p>
+<p><strong>1. 理论很重要，但实践更关键</strong></p>
+<p>刚开始我看了很多数据库设计的理论，但真正动手设计时才发现，理论和实际差距很大。比如书上说”要避免过度设计”，但怎么判断是不是”过度”？只有真正做了项目，遇到问题，才能理解。</p>
+<p><strong>2. 从简单开始，逐步优化</strong></p>
+<p>我刚开始想把所有功能都设计好，结果表设计得特别复杂，后来发现很多功能根本用不到。现在我的做法是：先设计最简单的版本，能跑起来就行。等真正需要某个功能时，再加对应的表或字段。</p>
+<p><strong>3. 多思考，多总结</strong></p>
+<p>每次遇到问题，我都会想：为什么会这样？有没有更好的方法？然后记录下来。这篇文章就是我学习过程中的总结，希望能帮助到同样在学习的朋友。（主要也是有个博客能让我督促自己啦</p>
+<p>要是你也想建一个博客，和我一样记录自己的学习，可以参考我的博客搭建方法（见<a href="/2024/11/21/2024-11-21-building-my-blog-with-hexo/">《从零开始搭建个人博客：Hexo + Butterfly 主题实践》</a>）</p>
+<p><strong>4. 不要害怕犯错</strong></p>
+<p>我在设计过程中犯了很多错误：表结构不合理、忘记建索引、外键设置错误…但每次犯错都是一次学习的机会。现在回头看，这些错误让我对数据库有了更深的理解。</p>
+<hr>
+<p><strong>写在最后</strong>：</p>
+<p>数据库设计是一个需要不断学习和实践的过程。刚开始我们不需要一开始就设计出完美的系统，像我开始的时候一直东想西想，但在项目写着写着的时候还是遇到了不少问题，所以最重要的还是先实践，再从中不断改进。如果这篇文章对你有帮助，或者你发现了什么问题，欢迎一起交流讨论！</p>
+<p>学习路上，我们一起加油！💪 </p>
+<p><strong>一些废话</strong>：</p>
+<p>写这篇博客花费了好长时间，感觉好多东西学了也用了，却不知道怎么输出给别人看，怎么梳理都还是不够好，但就这样吧 实在写不下去了，感觉比做项目还要命QAQ</p>
+<hr>
+<h2 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h2><p>这个用户中心项目系列的其他文章：</p>
+<ul>
+<li><a href="/2024/11/15/2024-11-15-password-security/">用户中心项目踩坑记 1 ：密码安全存储的那些坑</a></li>
+<li><a href="/2024/11/20/2024-11-20-login-session/">用户中心项目踩坑记 2 ：登录态管理的那些坑</a></li>
+</ul>
 ]]></content>
       <categories>
-        <category>Debug 经验</category>
+        <category>后端开发思考</category>
       </categories>
       <tags>
         <tag>后端开发</tag>
-        <tag>Session</tag>
-        <tag>Redis</tag>
+        <tag>数据库设计</tag>
+        <tag>用户中心</tag>
+        <tag>MySQL</tag>
       </tags>
   </entry>
   <entry>
@@ -395,5 +535,62 @@
 
 <p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
 ]]></content>
+  </entry>
+  <entry>
+    <title>用户中心项目踩坑记 2 ：登录态管理的那些坑</title>
+    <url>/2024/11/20/2024-11-20-login-session/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>项目又又又有问题，浏览器刷新一下就得重新登录，手机和电脑也无法共享状态。作为一个大二学生，只能说完全就是啥也不会，只能一点点地查资料。本文记录我如何把零散的 Session 改成基于 Redis 的 Token 方案，希望给也在自学的同学一点参考。</p>
+<h2 id="问题现象：登录态“稍纵即逝”"><a href="#问题现象：登录态“稍纵即逝”" class="headerlink" title="问题现象：登录态“稍纵即逝”"></a>问题现象：登录态“稍纵即逝”</h2><p>最开始我直接用 Spring Boot 自带的 <code>HttpSession</code> 保存用户对象：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request, HttpSession session)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    session.setAttribute(<span class="string">&quot;user&quot;</span>, user); <span class="comment">// 明明存了，但总丢</span></span><br><span class="line">    <span class="keyword">return</span> Result.success(user);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>随之暴露了三个痛点：</p>
+<ol>
+<li>前端用 React，刷新页面后 Session 丢失，用户得重新登录（本地两个浏览器窗口就能稳定复现）；</li>
+<li>我重启后端服务，所有用户全被踢下线（开发环境重启一次就得重新登录一遍）；</li>
+<li>同一账号 PC 登录后，手机端完全感知不到状态（我用同一 Wi-Fi 下的手机访问本地调试地址验证的）。</li>
+</ol>
+<h2 id="解决过程：Redis-Token"><a href="#解决过程：Redis-Token" class="headerlink" title="解决过程：Redis + Token"></a>解决过程：Redis + Token</h2><h3 id="1-技术选型"><a href="#1-技术选型" class="headerlink" title="1. 技术选型"></a>1. 技术选型</h3><p>我调研了三种方案：</p>
+<ul>
+<li><strong>原生 Session</strong>：依赖单机内存，重启或多实例时会混乱；</li>
+<li><strong>JWT</strong>：无状态但无法主动失效，对我现在的需求来说不好控制；</li>
+<li><strong>Redis + Token</strong>：登录后生成 Token，把用户信息放到 Redis，可控可失效，还能扩展到多节点。</li>
+</ul>
+<p>综合复杂度和可维护性，我选择第三种。</p>
+<h3 id="2-引入-Redis-依赖"><a href="#2-引入-Redis-依赖" class="headerlink" title="2. 引入 Redis 依赖"></a>2. 引入 Redis 依赖</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-配置-Redis-连接"><a href="#3-配置-Redis-连接" class="headerlink" title="3. 配置 Redis 连接"></a>3. 配置 Redis 连接</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">localhost</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<p>本地用 Docker 起了一个 Redis，正式环境也能直接复用配置。</p>
+<h3 id="4-Token-工具类"><a href="#4-Token-工具类" class="headerlink" title="4. Token 工具类"></a>4. Token 工具类</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TokenUtils</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">generateToken</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;USER_TOKEN:&quot;</span> + UUID.randomUUID().toString().replace(<span class="string">&quot;-&quot;</span>, <span class="string">&quot;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">storeToken</span><span class="params">(String token, UserDTO user)</span> &#123;</span><br><span class="line">        redisTemplate.opsForValue().set(token,</span><br><span class="line">                JSON.toJSONString(user),</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                TimeUnit.HOURS);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> UserDTO <span class="title function_">verifyToken</span><span class="params">(String token)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">userJson</span> <span class="operator">=</span> redisTemplate.opsForValue().get(token);</span><br><span class="line">        <span class="keyword">if</span> (userJson == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        redisTemplate.expire(token, <span class="number">2</span>, TimeUnit.HOURS);</span><br><span class="line">        <span class="keyword">return</span> JSON.parseObject(userJson, UserDTO.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我在这里刻意用了 <code>UserDTO</code>，把密码哈希等敏感字段去掉，避免 Redis 里存全量对象。虽然暂时还没部署，但趁早把敏感字段剥离掉也能避免后面迁移时手忙脚乱。</p>
+<h3 id="5-改造登录接口"><a href="#5-改造登录接口" class="headerlink" title="5. 改造登录接口"></a>5. 改造登录接口</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    <span class="type">UserDTO</span> <span class="variable">safeUser</span> <span class="operator">=</span> UserConvertor.toDTO(user);</span><br><span class="line">    <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> tokenUtils.generateToken(user.getId());</span><br><span class="line">    tokenUtils.storeToken(token, safeUser);</span><br><span class="line">    <span class="keyword">return</span> Result.success(<span class="keyword">new</span> <span class="title class_">LoginResponse</span>(token, safeUser));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>前端拿到 Token 后写入 <code>localStorage</code>，请求时放到 <code>Authorization</code> 头里。现阶段只是我自己在浏览器里调试，但等以后部署到测试环境只需要把基址调一下就能继续沿用。</p>
+<h3 id="6-拦截器校验登录态"><a href="#6-拦截器校验登录态" class="headerlink" title="6. 拦截器校验登录态"></a>6. 拦截器校验登录态</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">LoginInterceptor</span> <span class="keyword">implements</span> <span class="title class_">HandlerInterceptor</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> TokenUtils tokenUtils;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request,</span></span><br><span class="line"><span class="params">                             HttpServletResponse response,</span></span><br><span class="line"><span class="params">                             Object handler)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;Authorization&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.hasText(token)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;未登录&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> tokenUtils.verifyToken(token);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;登录已过期&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        UserContext.set(user); <span class="comment">// ThreadLocal 保存，方便后续获取</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在 <code>WebMvcConfigurer</code> 里把拦截器注册到需要鉴权的接口即可。</p>
+<h2 id="踩坑记录"><a href="#踩坑记录" class="headerlink" title="踩坑记录"></a>踩坑记录</h2><ul>
+<li><strong>Token 传递方式</strong>：最早放在 URL 查询参数，刷新和复制链接都会泄露，最后改成 <code>Authorization</code> 头；</li>
+<li><strong>Redis 序列化</strong>：默认 <code>JdkSerializationRedisSerializer</code> 让 Key 出现乱码，我统一改用 <code>StringRedisTemplate</code> + JSON；</li>
+<li><strong>主动下线</strong>：<code>verifyToken</code> 失败时直接抛异常，这样用户在别的设备登录会触发旧 Token 失效；</li>
+<li><strong>超时续期</strong>：每次验证成功后刷新过期时间，用户只要活跃就不会被踢。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次查了不少资料让我理解了”登录态&#x3D;如何安全记住用户”。原生 Session 在单机调试还行，但遇到多端、多实例就力不从心，更别说以后上线部署（可能有吧 。Redis + Token 虽然多写了点代码，却解决了刷新、重启、分布式和主动失效的问题。下一篇正常还会继续记录这个项目，也算是督促自己进步了，希望还能坚持写下去。</p>
+<hr>
+<h2 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h2><p>这个用户中心项目系列的其他文章：</p>
+<ul>
+<li><a href="/2024/11/15/2024-11-15-password-security/">用户中心项目踩坑记 1 ：密码安全存储的那些坑</a></li>
+<li><a href="/2024/11/26/2024-11-26-user-center-database-design/">用户中心项目的数据库设计：常见问题与解决方案</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Debug 经验</category>
+      </categories>
+      <tags>
+        <tag>后端开发</tag>
+        <tag>Session</tag>
+        <tag>Redis</tag>
+      </tags>
   </entry>
 </search>
