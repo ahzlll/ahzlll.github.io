@@ -1,35 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>博客开张：记录我的后端开发的思考与成长</title>
-    <url>/2024/11/03/2024-11-03-my-first-blog-post/</url>
-    <content><![CDATA[<h2 id="写在前面"><a href="#写在前面" class="headerlink" title="写在前面"></a>写在前面</h2><p>今天是我开始写博客的第一天（终于下定决心了！）。作为一名后端开发学习者，我决定用这个博客记录我在开发过程中的思考、踩过的坑以及收获。虽然不知道能坚持多久，但至少先开始吧 😅</p>
-<h2 id="为什么要写博客？"><a href="#为什么要写博客？" class="headerlink" title="为什么要写博客？"></a>为什么要写博客？</h2><ol>
-<li><strong>知识沉淀</strong>：把零散的知识点整理成体系化的文章</li>
-<li><strong>问题复盘</strong>：记录debug过程，下次遇到类似问题能快速定位</li>
-<li><strong>技术成长</strong>：通过写作加深对技术的理解</li>
-<li><strong>分享交流</strong>：希望能帮助到遇到同样问题的开发者</li>
-</ol>
-<h2 id="博客内容规划"><a href="#博客内容规划" class="headerlink" title="博客内容规划"></a>博客内容规划</h2><p>这个博客主要会记录：</p>
-<ul>
-<li><strong>后端开发思考</strong>：架构设计、性能优化、代码质量等</li>
-<li><strong>Debug经验</strong>：实际项目中遇到的问题和解决方案</li>
-<li><strong>技术学习</strong>：学习新技术的心得和总结</li>
-<li><strong>踩坑记录</strong>：那些让人头疼的bug和解决方案</li>
-</ul>
-<h2 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h2><p>希望这个博客能见证我的技术成长，也希望能为其他开发者提供一些参考（虽然现在还是个菜鸟哈哈哈）。</p>
-<p>路漫漫其修远兮，吾将上下而求索。</p>
-<p>PS: 如果文章有错误，欢迎指正！毕竟还在学习中，难免会有理解不到位的地方 😊</p>
-]]></content>
-      <categories>
-        <category>随便说说</category>
-      </categories>
-      <tags>
-        <tag>随笔</tag>
-        <tag>后端开发</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>用户中心项目踩坑记 1 ：密码加密那些事儿</title>
     <url>/2024/11/15/2024-11-15-password-security/</url>
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>这是我做的第一个项目。前几天我对安全的理解只停留在“别写出 bug 就行”。直到在测试数据库时，亲眼看到 <code>user_password</code> 字段里躺着一串串明文密码，才想起之前刷到的视频里一句话：“明文密码 &#x3D; 红线”。本文记录我从明文存储到使用 BCrypt 的全过程，留给也在苦苦写项目的同学做参考。</p>
@@ -82,62 +53,32 @@
       </tags>
   </entry>
   <entry>
-    <title>用户中心项目踩坑记 2 ：登录态管理的那些坑</title>
-    <url>/2024/11/20/2024-11-20-login-session/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>项目又又又有问题，浏览器刷新一下就得重新登录，手机和电脑也无法共享状态。作为一个大二学生，只能说完全就是啥也不会，只能一点点地查资料。本文记录我如何把零散的 Session 改成基于 Redis 的 Token 方案，希望给也在自学的同学一点参考。</p>
-<h2 id="问题现象：登录态“稍纵即逝”"><a href="#问题现象：登录态“稍纵即逝”" class="headerlink" title="问题现象：登录态“稍纵即逝”"></a>问题现象：登录态“稍纵即逝”</h2><p>最开始我直接用 Spring Boot 自带的 <code>HttpSession</code> 保存用户对象：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request, HttpSession session)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    session.setAttribute(<span class="string">&quot;user&quot;</span>, user); <span class="comment">// 明明存了，但总丢</span></span><br><span class="line">    <span class="keyword">return</span> Result.success(user);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>随之暴露了三个痛点：</p>
-<ol>
-<li>前端用 React，刷新页面后 Session 丢失，用户得重新登录（本地两个浏览器窗口就能稳定复现）；</li>
-<li>我重启后端服务，所有用户全被踢下线（开发环境重启一次就得重新登录一遍）；</li>
-<li>同一账号 PC 登录后，手机端完全感知不到状态（我用同一 Wi-Fi 下的手机访问本地调试地址验证的）。</li>
+    <title>博客开张：记录我的后端开发的思考与成长</title>
+    <url>/2024/11/03/2024-11-03-my-first-blog-post/</url>
+    <content><![CDATA[<h2 id="写在前面"><a href="#写在前面" class="headerlink" title="写在前面"></a>写在前面</h2><p>今天是我开始写博客的第一天（终于下定决心了！）。作为一名后端开发学习者，我决定用这个博客记录我在开发过程中的思考、踩过的坑以及收获。虽然不知道能坚持多久，但至少先开始吧 😅</p>
+<h2 id="为什么要写博客？"><a href="#为什么要写博客？" class="headerlink" title="为什么要写博客？"></a>为什么要写博客？</h2><ol>
+<li><strong>知识沉淀</strong>：把零散的知识点整理成体系化的文章</li>
+<li><strong>问题复盘</strong>：记录debug过程，下次遇到类似问题能快速定位</li>
+<li><strong>技术成长</strong>：通过写作加深对技术的理解</li>
+<li><strong>分享交流</strong>：希望能帮助到遇到同样问题的开发者</li>
 </ol>
-<h2 id="解决过程：Redis-Token"><a href="#解决过程：Redis-Token" class="headerlink" title="解决过程：Redis + Token"></a>解决过程：Redis + Token</h2><h3 id="1-技术选型"><a href="#1-技术选型" class="headerlink" title="1. 技术选型"></a>1. 技术选型</h3><p>我调研了三种方案：</p>
+<h2 id="博客内容规划"><a href="#博客内容规划" class="headerlink" title="博客内容规划"></a>博客内容规划</h2><p>这个博客主要会记录：</p>
 <ul>
-<li><strong>原生 Session</strong>：依赖单机内存，重启或多实例时会混乱；</li>
-<li><strong>JWT</strong>：无状态但无法主动失效，对我现在的需求来说不好控制；</li>
-<li><strong>Redis + Token</strong>：登录后生成 Token，把用户信息放到 Redis，可控可失效，还能扩展到多节点。</li>
+<li><strong>后端开发思考</strong>：架构设计、性能优化、代码质量等</li>
+<li><strong>Debug经验</strong>：实际项目中遇到的问题和解决方案</li>
+<li><strong>技术学习</strong>：学习新技术的心得和总结</li>
+<li><strong>踩坑记录</strong>：那些让人头疼的bug和解决方案</li>
 </ul>
-<p>综合复杂度和可维护性，我选择第三种。</p>
-<h3 id="2-引入-Redis-依赖"><a href="#2-引入-Redis-依赖" class="headerlink" title="2. 引入 Redis 依赖"></a>2. 引入 Redis 依赖</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="3-配置-Redis-连接"><a href="#3-配置-Redis-连接" class="headerlink" title="3. 配置 Redis 连接"></a>3. 配置 Redis 连接</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">localhost</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
-
-<p>本地用 Docker 起了一个 Redis，正式环境也能直接复用配置。</p>
-<h3 id="4-Token-工具类"><a href="#4-Token-工具类" class="headerlink" title="4. Token 工具类"></a>4. Token 工具类</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TokenUtils</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">generateToken</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;USER_TOKEN:&quot;</span> + UUID.randomUUID().toString().replace(<span class="string">&quot;-&quot;</span>, <span class="string">&quot;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">storeToken</span><span class="params">(String token, UserDTO user)</span> &#123;</span><br><span class="line">        redisTemplate.opsForValue().set(token,</span><br><span class="line">                JSON.toJSONString(user),</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                TimeUnit.HOURS);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> UserDTO <span class="title function_">verifyToken</span><span class="params">(String token)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">userJson</span> <span class="operator">=</span> redisTemplate.opsForValue().get(token);</span><br><span class="line">        <span class="keyword">if</span> (userJson == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        redisTemplate.expire(token, <span class="number">2</span>, TimeUnit.HOURS);</span><br><span class="line">        <span class="keyword">return</span> JSON.parseObject(userJson, UserDTO.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>我在这里刻意用了 <code>UserDTO</code>，把密码哈希等敏感字段去掉，避免 Redis 里存全量对象。虽然暂时还没部署，但趁早把敏感字段剥离掉也能避免后面迁移时手忙脚乱。</p>
-<h3 id="5-改造登录接口"><a href="#5-改造登录接口" class="headerlink" title="5. 改造登录接口"></a>5. 改造登录接口</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    <span class="type">UserDTO</span> <span class="variable">safeUser</span> <span class="operator">=</span> UserConvertor.toDTO(user);</span><br><span class="line">    <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> tokenUtils.generateToken(user.getId());</span><br><span class="line">    tokenUtils.storeToken(token, safeUser);</span><br><span class="line">    <span class="keyword">return</span> Result.success(<span class="keyword">new</span> <span class="title class_">LoginResponse</span>(token, safeUser));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>前端拿到 Token 后写入 <code>localStorage</code>，请求时放到 <code>Authorization</code> 头里。现阶段只是我自己在浏览器里调试，但等以后部署到测试环境只需要把基址调一下就能继续沿用。</p>
-<h3 id="6-拦截器校验登录态"><a href="#6-拦截器校验登录态" class="headerlink" title="6. 拦截器校验登录态"></a>6. 拦截器校验登录态</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">LoginInterceptor</span> <span class="keyword">implements</span> <span class="title class_">HandlerInterceptor</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> TokenUtils tokenUtils;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request,</span></span><br><span class="line"><span class="params">                             HttpServletResponse response,</span></span><br><span class="line"><span class="params">                             Object handler)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;Authorization&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.hasText(token)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;未登录&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> tokenUtils.verifyToken(token);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;登录已过期&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        UserContext.set(user); <span class="comment">// ThreadLocal 保存，方便后续获取</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>在 <code>WebMvcConfigurer</code> 里把拦截器注册到需要鉴权的接口即可。</p>
-<h2 id="踩坑记录"><a href="#踩坑记录" class="headerlink" title="踩坑记录"></a>踩坑记录</h2><ul>
-<li><strong>Token 传递方式</strong>：最早放在 URL 查询参数，刷新和复制链接都会泄露，最后改成 <code>Authorization</code> 头；</li>
-<li><strong>Redis 序列化</strong>：默认 <code>JdkSerializationRedisSerializer</code> 让 Key 出现乱码，我统一改用 <code>StringRedisTemplate</code> + JSON；</li>
-<li><strong>主动下线</strong>：<code>verifyToken</code> 失败时直接抛异常，这样用户在别的设备登录会触发旧 Token 失效；</li>
-<li><strong>超时续期</strong>：每次验证成功后刷新过期时间，用户只要活跃就不会被踢。</li>
-</ul>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次查了不少资料让我理解了”登录态&#x3D;如何安全记住用户”。原生 Session 在单机调试还行，但遇到多端、多实例就力不从心，更别说以后上线部署（可能有吧 。Redis + Token 虽然多写了点代码，却解决了刷新、重启、分布式和主动失效的问题。下一篇正常还会继续记录这个项目，也算是督促自己进步了，希望还能坚持写下去。</p>
-<hr>
-<h2 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h2><p>这个用户中心项目系列的其他文章：</p>
-<ul>
-<li><a href="/2024/11/15/2024-11-15-password-security/">用户中心项目踩坑记 1：密码加密那些事儿</a></li>
-<li><a href="/2024/11/26/2024-11-26-user-center-database-design/">用户中心项目的数据库设计：常见问题与解决方案</a></li>
-<li><a href="/2024/11/29/2024-11-29-user-center-project-summary/">用户中心项目总结：从 0 到 1 的完整实践</a></li>
-</ul>
+<h2 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h2><p>希望这个博客能见证我的技术成长，也希望能为其他开发者提供一些参考（虽然现在还是个菜鸟哈哈哈）。</p>
+<p>路漫漫其修远兮，吾将上下而求索。</p>
+<p>PS: 如果文章有错误，欢迎指正！毕竟还在学习中，难免会有理解不到位的地方 😊</p>
 ]]></content>
       <categories>
-        <category>Debug 经验</category>
+        <category>随便说说</category>
       </categories>
       <tags>
         <tag>后端开发</tag>
-        <tag>用户中心</tag>
-        <tag>Session</tag>
-        <tag>Redis</tag>
+        <tag>随笔</tag>
       </tags>
   </entry>
   <entry>
@@ -262,6 +203,193 @@
         <tag>Hexo</tag>
         <tag>Butterfly</tag>
         <tag>blog</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>用户中心项目踩坑记 2 ：登录态管理的那些坑</title>
+    <url>/2024/11/20/2024-11-20-login-session/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>项目又又又有问题，浏览器刷新一下就得重新登录，手机和电脑也无法共享状态。作为一个大二学生，只能说完全就是啥也不会，只能一点点地查资料。本文记录我如何把零散的 Session 改成基于 Redis 的 Token 方案，希望给也在自学的同学一点参考。</p>
+<h2 id="问题现象：登录态“稍纵即逝”"><a href="#问题现象：登录态“稍纵即逝”" class="headerlink" title="问题现象：登录态“稍纵即逝”"></a>问题现象：登录态“稍纵即逝”</h2><p>最开始我直接用 Spring Boot 自带的 <code>HttpSession</code> 保存用户对象：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request, HttpSession session)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    session.setAttribute(<span class="string">&quot;user&quot;</span>, user); <span class="comment">// 明明存了，但总丢</span></span><br><span class="line">    <span class="keyword">return</span> Result.success(user);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>随之暴露了三个痛点：</p>
+<ol>
+<li>前端用 React，刷新页面后 Session 丢失，用户得重新登录（本地两个浏览器窗口就能稳定复现）；</li>
+<li>我重启后端服务，所有用户全被踢下线（开发环境重启一次就得重新登录一遍）；</li>
+<li>同一账号 PC 登录后，手机端完全感知不到状态（我用同一 Wi-Fi 下的手机访问本地调试地址验证的）。</li>
+</ol>
+<h2 id="解决过程：Redis-Token"><a href="#解决过程：Redis-Token" class="headerlink" title="解决过程：Redis + Token"></a>解决过程：Redis + Token</h2><h3 id="1-技术选型"><a href="#1-技术选型" class="headerlink" title="1. 技术选型"></a>1. 技术选型</h3><p>我调研了三种方案：</p>
+<ul>
+<li><strong>原生 Session</strong>：依赖单机内存，重启或多实例时会混乱；</li>
+<li><strong>JWT</strong>：无状态但无法主动失效，对我现在的需求来说不好控制；</li>
+<li><strong>Redis + Token</strong>：登录后生成 Token，把用户信息放到 Redis，可控可失效，还能扩展到多节点。</li>
+</ul>
+<p>综合复杂度和可维护性，我选择第三种。</p>
+<h3 id="2-引入-Redis-依赖"><a href="#2-引入-Redis-依赖" class="headerlink" title="2. 引入 Redis 依赖"></a>2. 引入 Redis 依赖</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-配置-Redis-连接"><a href="#3-配置-Redis-连接" class="headerlink" title="3. 配置 Redis 连接"></a>3. 配置 Redis 连接</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">localhost</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<p>本地用 Docker 起了一个 Redis，正式环境也能直接复用配置。</p>
+<h3 id="4-Token-工具类"><a href="#4-Token-工具类" class="headerlink" title="4. Token 工具类"></a>4. Token 工具类</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TokenUtils</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">generateToken</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;USER_TOKEN:&quot;</span> + UUID.randomUUID().toString().replace(<span class="string">&quot;-&quot;</span>, <span class="string">&quot;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">storeToken</span><span class="params">(String token, UserDTO user)</span> &#123;</span><br><span class="line">        redisTemplate.opsForValue().set(token,</span><br><span class="line">                JSON.toJSONString(user),</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                TimeUnit.HOURS);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> UserDTO <span class="title function_">verifyToken</span><span class="params">(String token)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">userJson</span> <span class="operator">=</span> redisTemplate.opsForValue().get(token);</span><br><span class="line">        <span class="keyword">if</span> (userJson == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        redisTemplate.expire(token, <span class="number">2</span>, TimeUnit.HOURS);</span><br><span class="line">        <span class="keyword">return</span> JSON.parseObject(userJson, UserDTO.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我在这里刻意用了 <code>UserDTO</code>，把密码哈希等敏感字段去掉，避免 Redis 里存全量对象。虽然暂时还没部署，但趁早把敏感字段剥离掉也能避免后面迁移时手忙脚乱。</p>
+<h3 id="5-改造登录接口"><a href="#5-改造登录接口" class="headerlink" title="5. 改造登录接口"></a>5. 改造登录接口</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    <span class="type">UserDTO</span> <span class="variable">safeUser</span> <span class="operator">=</span> UserConvertor.toDTO(user);</span><br><span class="line">    <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> tokenUtils.generateToken(user.getId());</span><br><span class="line">    tokenUtils.storeToken(token, safeUser);</span><br><span class="line">    <span class="keyword">return</span> Result.success(<span class="keyword">new</span> <span class="title class_">LoginResponse</span>(token, safeUser));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>前端拿到 Token 后写入 <code>localStorage</code>，请求时放到 <code>Authorization</code> 头里。现阶段只是我自己在浏览器里调试，但等以后部署到测试环境只需要把基址调一下就能继续沿用。</p>
+<h3 id="6-拦截器校验登录态"><a href="#6-拦截器校验登录态" class="headerlink" title="6. 拦截器校验登录态"></a>6. 拦截器校验登录态</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">LoginInterceptor</span> <span class="keyword">implements</span> <span class="title class_">HandlerInterceptor</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> TokenUtils tokenUtils;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request,</span></span><br><span class="line"><span class="params">                             HttpServletResponse response,</span></span><br><span class="line"><span class="params">                             Object handler)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;Authorization&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.hasText(token)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;未登录&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> tokenUtils.verifyToken(token);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;登录已过期&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        UserContext.set(user); <span class="comment">// ThreadLocal 保存，方便后续获取</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在 <code>WebMvcConfigurer</code> 里把拦截器注册到需要鉴权的接口即可。</p>
+<h2 id="踩坑记录"><a href="#踩坑记录" class="headerlink" title="踩坑记录"></a>踩坑记录</h2><ul>
+<li><strong>Token 传递方式</strong>：最早放在 URL 查询参数，刷新和复制链接都会泄露，最后改成 <code>Authorization</code> 头；</li>
+<li><strong>Redis 序列化</strong>：默认 <code>JdkSerializationRedisSerializer</code> 让 Key 出现乱码，我统一改用 <code>StringRedisTemplate</code> + JSON；</li>
+<li><strong>主动下线</strong>：<code>verifyToken</code> 失败时直接抛异常，这样用户在别的设备登录会触发旧 Token 失效；</li>
+<li><strong>超时续期</strong>：每次验证成功后刷新过期时间，用户只要活跃就不会被踢。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次查了不少资料让我理解了”登录态&#x3D;如何安全记住用户”。原生 Session 在单机调试还行，但遇到多端、多实例就力不从心，更别说以后上线部署（可能有吧 。Redis + Token 虽然多写了点代码，却解决了刷新、重启、分布式和主动失效的问题。下一篇正常还会继续记录这个项目，也算是督促自己进步了，希望还能坚持写下去。</p>
+<hr>
+<h2 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h2><p>这个用户中心项目系列的其他文章：</p>
+<ul>
+<li><a href="/2024/11/15/2024-11-15-password-security/">用户中心项目踩坑记 1：密码加密那些事儿</a></li>
+<li><a href="/2024/11/26/2024-11-26-user-center-database-design/">用户中心项目的数据库设计：常见问题与解决方案</a></li>
+<li><a href="/2024/11/29/2024-11-29-user-center-project-summary/">用户中心项目总结：从 0 到 1 的完整实践</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Debug 经验</category>
+      </categories>
+      <tags>
+        <tag>后端开发</tag>
+        <tag>用户中心</tag>
+        <tag>Session</tag>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>程序员不一定知道的10个技术冷知识</title>
+    <url>/2024/11/25/2024-11-25-programming-cold-knowledge/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在编程的世界里，总有一些有趣但容易被忽视的知识点。这些”冷知识”可能不会直接影响你的代码，但了解它们能让你对编程有更深的理解（而且聊天的时候可以装X 😎）。今天分享一些我觉得有趣的技术冷知识。</p>
+<h2 id="1-为什么数组索引从0开始？"><a href="#1-为什么数组索引从0开始？" class="headerlink" title="1. 为什么数组索引从0开始？"></a>1. 为什么数组索引从0开始？</h2><p>这是一个经典问题。数组索引从0开始的原因有多种说法：</p>
+<h3 id="历史原因"><a href="#历史原因" class="headerlink" title="历史原因"></a>历史原因</h3><p>在C语言中，数组名实际上是指向数组第一个元素的指针。所以 <code>arr[i]</code> 实际上等价于 <code>*(arr + i)</code>，即从数组起始地址偏移 <code>i</code> 个元素大小的位置。</p>
+<p>如果从1开始，那么 <code>arr[i]</code> 就需要写成 <code>*(arr + i - 1)</code>，多了一次减法运算。</p>
+<h3 id="数学原因"><a href="#数学原因" class="headerlink" title="数学原因"></a>数学原因</h3><p>从数学角度看，索引从0开始更符合”偏移量”的概念：</p>
+<ul>
+<li>第一个元素：偏移0个单位</li>
+<li>第二个元素：偏移1个单位</li>
+<li>第n个元素：偏移n-1个单位</li>
+</ul>
+<h3 id="实际影响"><a href="#实际影响" class="headerlink" title="实际影响"></a>实际影响</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 从0开始：第i个元素的索引就是i</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; arr.length; i++) &#123;</span><br><span class="line">    arr[i] = i;  <span class="comment">// 简洁</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 如果从1开始：第i个元素的索引是i-1</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">1</span>; i &lt;= arr.length; i++) &#123;</span><br><span class="line">    arr[i-<span class="number">1</span>] = i;  <span class="comment">// 需要减1</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-为什么叫”Bug”？"><a href="#2-为什么叫”Bug”？" class="headerlink" title="2. 为什么叫”Bug”？"></a>2. 为什么叫”Bug”？</h2><p>1947年，哈佛大学的Mark II计算机出现故障。工程师Grace Hopper在继电器中发现了一只飞蛾，她将这只飞蛾用胶带贴在了日志本上，并标注”First actual case of bug being found”（发现bug的第一个实际案例）。</p>
+<p>从此，”bug”就成了程序错误的代名词。</p>
+<p>有趣的是，在Grace Hopper之前，Thomas Edison就已经用”bug”来形容技术问题了。他在1878年的一封信中写道：”It has been just so in all of my inventions. The first step is an intuition, and comes with a burst, then difficulties arise—this thing gives out and [it is] then that ‘Bugs’—as such little faults and difficulties are called—show themselves…”</p>
+<h2 id="3-为什么叫”Foo”和”Bar”？"><a href="#3-为什么叫”Foo”和”Bar”？" class="headerlink" title="3. 为什么叫”Foo”和”Bar”？"></a>3. 为什么叫”Foo”和”Bar”？</h2><p>在编程示例中，我们经常看到 <code>foo</code>、<code>bar</code>、<code>baz</code> 这样的变量名。这些名字来自哪里？</p>
+<h3 id="历史来源"><a href="#历史来源" class="headerlink" title="历史来源"></a>历史来源</h3><p>“Foo”可能来自二战时期的军事俚语”FUBAR”（Fucked Up Beyond All Recognition），意思是”完全搞砸了”。</p>
+<p>“Bar”可能是”foo”的押韵词，或者是”beyond all recognition”的缩写。</p>
+<h3 id="使用习惯"><a href="#使用习惯" class="headerlink" title="使用习惯"></a>使用习惯</h3><p>这些名字已经成为编程中的”占位符”，表示”这里应该有一个有意义的变量名，但为了示例简洁，我们用一个无意义的名称”。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 示例代码</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processFoo</span><span class="params">(Foo foo)</span> &#123;</span><br><span class="line">    <span class="type">Bar</span> <span class="variable">bar</span> <span class="operator">=</span> foo.getBar();</span><br><span class="line">    <span class="type">Baz</span> <span class="variable">baz</span> <span class="operator">=</span> bar.getBaz();</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-为什么HTTP状态码是三位数？"><a href="#4-为什么HTTP状态码是三位数？" class="headerlink" title="4. 为什么HTTP状态码是三位数？"></a>4. 为什么HTTP状态码是三位数？</h2><p>HTTP状态码使用三位数字，这是有原因的：</p>
+<h3 id="设计原因"><a href="#设计原因" class="headerlink" title="设计原因"></a>设计原因</h3><ul>
+<li><p><strong>第一位数字</strong>：表示响应类别</p>
+<ul>
+<li>1xx：信息性响应</li>
+<li>2xx：成功响应</li>
+<li>3xx：重定向</li>
+<li>4xx：客户端错误</li>
+<li>5xx：服务器错误</li>
+</ul>
+</li>
+<li><p><strong>后两位数字</strong>：表示具体的错误类型</p>
+</li>
+</ul>
+<h3 id="扩展性"><a href="#扩展性" class="headerlink" title="扩展性"></a>扩展性</h3><p>这种设计允许：</p>
+<ul>
+<li>在现有类别中添加新的状态码（如201 Created）</li>
+<li>自定义状态码（虽然不推荐）</li>
+<li>客户端可以根据第一位数字快速判断响应类型</li>
+</ul>
+<h2 id="5-为什么叫”Cookie”？"><a href="#5-为什么叫”Cookie”？" class="headerlink" title="5. 为什么叫”Cookie”？"></a>5. 为什么叫”Cookie”？</h2><p>HTTP Cookie的名字来自”magic cookie”（魔法饼干），这是Unix系统中的一个概念，指的是一小段数据，程序可以读取它，但通常不能修改。</p>
+<h3 id="命名来源"><a href="#命名来源" class="headerlink" title="命名来源"></a>命名来源</h3><p>Lou Montulli在1994年发明了HTTP Cookie。他选择这个名字是因为：</p>
+<ol>
+<li>Cookie是”magic cookie”的简称</li>
+<li>Cookie是”小甜点”，就像HTTP Cookie是”小数据片段”</li>
+<li>名字简单易记</li>
+</ol>
+<h3 id="有趣的事实"><a href="#有趣的事实" class="headerlink" title="有趣的事实"></a>有趣的事实</h3><p>Cookie的正式名称是”HTTP State Management Mechanism”（HTTP状态管理机制），但”Cookie”这个名字更流行。</p>
+<h2 id="6-为什么叫”Spam”（垃圾邮件）？"><a href="#6-为什么叫”Spam”（垃圾邮件）？" class="headerlink" title="6. 为什么叫”Spam”（垃圾邮件）？"></a>6. 为什么叫”Spam”（垃圾邮件）？</h2><p>“Spam”这个词来自Monty Python的喜剧小品，其中Spam（午餐肉罐头）在菜单上反复出现，让人厌烦。</p>
+<p>后来，这个词被用来形容：</p>
+<ul>
+<li>垃圾邮件（Email Spam）</li>
+<li>垃圾评论（Comment Spam）</li>
+<li>垃圾信息（Message Spam）</li>
+</ul>
+<h3 id="技术含义"><a href="#技术含义" class="headerlink" title="技术含义"></a>技术含义</h3><p>在编程中，”spam”通常指：</p>
+<ul>
+<li>重复发送大量无意义的消息</li>
+<li>恶意刷屏</li>
+<li>自动化攻击</li>
+</ul>
+<h2 id="7-为什么叫”Daemon”（守护进程）？"><a href="#7-为什么叫”Daemon”（守护进程）？" class="headerlink" title="7. 为什么叫”Daemon”（守护进程）？"></a>7. 为什么叫”Daemon”（守护进程）？</h2><p>在Unix&#x2F;Linux系统中，后台运行的进程叫”daemon”（守护进程）。</p>
+<h3 id="命名来源-1"><a href="#命名来源-1" class="headerlink" title="命名来源"></a>命名来源</h3><p>“Daemon”来自希腊神话中的”δαίμων”（daimon），指的是介于神和人之间的超自然存在，它们默默工作，不被人注意。</p>
+<h3 id="技术含义-1"><a href="#技术含义-1" class="headerlink" title="技术含义"></a>技术含义</h3><p>守护进程的特点：</p>
+<ul>
+<li>在后台运行</li>
+<li>没有控制终端</li>
+<li>通常以root权限运行</li>
+<li>为系统提供服务</li>
+</ul>
+<p>例如：<code>httpd</code>（Web服务器）、<code>mysqld</code>（数据库服务器）、<code>sshd</code>（SSH服务器）。</p>
+<h2 id="8-为什么叫”Ping”？"><a href="#8-为什么叫”Ping”？" class="headerlink" title="8. 为什么叫”Ping”？"></a>8. 为什么叫”Ping”？</h2><p><code>ping</code> 命令的名字来自声纳的”ping”声。</p>
+<h3 id="命名来源-2"><a href="#命名来源-2" class="headerlink" title="命名来源"></a>命名来源</h3><p>Mike Muuss在1983年编写了ping程序。他选择这个名字是因为：</p>
+<ol>
+<li>声纳发出”ping”声来探测物体</li>
+<li>ping程序发送数据包来探测网络连接</li>
+<li>两者都是”探测”的概念</li>
+</ol>
+<h3 id="技术含义-2"><a href="#技术含义-2" class="headerlink" title="技术含义"></a>技术含义</h3><p>ping的工作原理：</p>
+<ol>
+<li>发送ICMP Echo Request包</li>
+<li>等待目标主机返回ICMP Echo Reply包</li>
+<li>计算往返时间（RTT）</li>
+</ol>
+<h2 id="9-为什么叫”Stack-Overflow”？"><a href="#9-为什么叫”Stack-Overflow”？" class="headerlink" title="9. 为什么叫”Stack Overflow”？"></a>9. 为什么叫”Stack Overflow”？</h2><p>Stack Overflow（栈溢出）是一个著名的编程问答网站。</p>
+<h3 id="技术含义-3"><a href="#技术含义-3" class="headerlink" title="技术含义"></a>技术含义</h3><p>“Stack Overflow”是一个编程术语，指的是：</p>
+<ul>
+<li>当程序调用栈超出可用内存时</li>
+<li>会导致程序崩溃</li>
+<li>是一个常见的编程错误</li>
+</ul>
+<h3 id="网站命名"><a href="#网站命名" class="headerlink" title="网站命名"></a>网站命名</h3><p>网站创始人选择这个名字是因为：</p>
+<ol>
+<li>这是一个程序员都熟悉的术语</li>
+<li>暗示”问题太多，栈溢出了”</li>
+<li>容易记忆和传播</li>
+</ol>
+<h2 id="10-为什么叫”Git”？"><a href="#10-为什么叫”Git”？" class="headerlink" title="10. 为什么叫”Git”？"></a>10. 为什么叫”Git”？</h2><p>Git是一个分布式版本控制系统。</p>
+<h3 id="命名来源-3"><a href="#命名来源-3" class="headerlink" title="命名来源"></a>命名来源</h3><p>Linus Torvalds（Linux的创始人）在2005年创建了Git。他选择这个名字是因为：</p>
+<ol>
+<li>“Git”在英语俚语中是”愚蠢的人”的意思</li>
+<li>Linus自嘲地说：”I’m an egotistical bastard, and I name all my projects after myself. First ‘Linux’, now ‘Git’.”</li>
+<li>但实际上，”Git”可能是”Global Information Tracker”的缩写</li>
+</ol>
+<h3 id="有趣的事实-1"><a href="#有趣的事实-1" class="headerlink" title="有趣的事实"></a>有趣的事实</h3><p>Git的logo是一只章鱼猫（Octocat），这是GitHub的吉祥物。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这些技术冷知识可能不会直接影响你的代码，但它们能让你：</p>
+<ol>
+<li><strong>理解历史</strong>：了解技术术语的来源</li>
+<li><strong>加深理解</strong>：对编程概念有更深的认识</li>
+<li><strong>增加趣味</strong>：让编程变得更有趣</li>
+<li><strong>扩展知识</strong>：了解技术背后的故事</li>
+</ol>
+<hr>
+<p><strong>思考</strong>：技术不仅仅是代码，还有背后的历史、文化和故事。了解这些”冷知识”，能让我们的技术之路更加丰富多彩（而且可以冷死朋友哈哈哈）。</p>
+<p>如果你还知道其他有趣的技术冷知识，欢迎分享！毕竟学习路上，有趣一点总是好的 😊</p>
+]]></content>
+      <categories>
+        <category>随便说说</category>
+      </categories>
+      <tags>
+        <tag>随笔</tag>
+        <tag>冷知识</tag>
       </tags>
   </entry>
   <entry>
@@ -449,134 +577,6 @@
         <tag>Redis</tag>
         <tag>数据库设计</tag>
         <tag>MySQL</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>程序员不一定知道的10个技术冷知识</title>
-    <url>/2024/11/25/2024-11-25-programming-cold-knowledge/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在编程的世界里，总有一些有趣但容易被忽视的知识点。这些”冷知识”可能不会直接影响你的代码，但了解它们能让你对编程有更深的理解（而且聊天的时候可以装X 😎）。今天分享一些我觉得有趣的技术冷知识。</p>
-<h2 id="1-为什么数组索引从0开始？"><a href="#1-为什么数组索引从0开始？" class="headerlink" title="1. 为什么数组索引从0开始？"></a>1. 为什么数组索引从0开始？</h2><p>这是一个经典问题。数组索引从0开始的原因有多种说法：</p>
-<h3 id="历史原因"><a href="#历史原因" class="headerlink" title="历史原因"></a>历史原因</h3><p>在C语言中，数组名实际上是指向数组第一个元素的指针。所以 <code>arr[i]</code> 实际上等价于 <code>*(arr + i)</code>，即从数组起始地址偏移 <code>i</code> 个元素大小的位置。</p>
-<p>如果从1开始，那么 <code>arr[i]</code> 就需要写成 <code>*(arr + i - 1)</code>，多了一次减法运算。</p>
-<h3 id="数学原因"><a href="#数学原因" class="headerlink" title="数学原因"></a>数学原因</h3><p>从数学角度看，索引从0开始更符合”偏移量”的概念：</p>
-<ul>
-<li>第一个元素：偏移0个单位</li>
-<li>第二个元素：偏移1个单位</li>
-<li>第n个元素：偏移n-1个单位</li>
-</ul>
-<h3 id="实际影响"><a href="#实际影响" class="headerlink" title="实际影响"></a>实际影响</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 从0开始：第i个元素的索引就是i</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; arr.length; i++) &#123;</span><br><span class="line">    arr[i] = i;  <span class="comment">// 简洁</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 如果从1开始：第i个元素的索引是i-1</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">1</span>; i &lt;= arr.length; i++) &#123;</span><br><span class="line">    arr[i-<span class="number">1</span>] = i;  <span class="comment">// 需要减1</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="2-为什么叫”Bug”？"><a href="#2-为什么叫”Bug”？" class="headerlink" title="2. 为什么叫”Bug”？"></a>2. 为什么叫”Bug”？</h2><p>1947年，哈佛大学的Mark II计算机出现故障。工程师Grace Hopper在继电器中发现了一只飞蛾，她将这只飞蛾用胶带贴在了日志本上，并标注”First actual case of bug being found”（发现bug的第一个实际案例）。</p>
-<p>从此，”bug”就成了程序错误的代名词。</p>
-<p>有趣的是，在Grace Hopper之前，Thomas Edison就已经用”bug”来形容技术问题了。他在1878年的一封信中写道：”It has been just so in all of my inventions. The first step is an intuition, and comes with a burst, then difficulties arise—this thing gives out and [it is] then that ‘Bugs’—as such little faults and difficulties are called—show themselves…”</p>
-<h2 id="3-为什么叫”Foo”和”Bar”？"><a href="#3-为什么叫”Foo”和”Bar”？" class="headerlink" title="3. 为什么叫”Foo”和”Bar”？"></a>3. 为什么叫”Foo”和”Bar”？</h2><p>在编程示例中，我们经常看到 <code>foo</code>、<code>bar</code>、<code>baz</code> 这样的变量名。这些名字来自哪里？</p>
-<h3 id="历史来源"><a href="#历史来源" class="headerlink" title="历史来源"></a>历史来源</h3><p>“Foo”可能来自二战时期的军事俚语”FUBAR”（Fucked Up Beyond All Recognition），意思是”完全搞砸了”。</p>
-<p>“Bar”可能是”foo”的押韵词，或者是”beyond all recognition”的缩写。</p>
-<h3 id="使用习惯"><a href="#使用习惯" class="headerlink" title="使用习惯"></a>使用习惯</h3><p>这些名字已经成为编程中的”占位符”，表示”这里应该有一个有意义的变量名，但为了示例简洁，我们用一个无意义的名称”。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 示例代码</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processFoo</span><span class="params">(Foo foo)</span> &#123;</span><br><span class="line">    <span class="type">Bar</span> <span class="variable">bar</span> <span class="operator">=</span> foo.getBar();</span><br><span class="line">    <span class="type">Baz</span> <span class="variable">baz</span> <span class="operator">=</span> bar.getBaz();</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="4-为什么HTTP状态码是三位数？"><a href="#4-为什么HTTP状态码是三位数？" class="headerlink" title="4. 为什么HTTP状态码是三位数？"></a>4. 为什么HTTP状态码是三位数？</h2><p>HTTP状态码使用三位数字，这是有原因的：</p>
-<h3 id="设计原因"><a href="#设计原因" class="headerlink" title="设计原因"></a>设计原因</h3><ul>
-<li><p><strong>第一位数字</strong>：表示响应类别</p>
-<ul>
-<li>1xx：信息性响应</li>
-<li>2xx：成功响应</li>
-<li>3xx：重定向</li>
-<li>4xx：客户端错误</li>
-<li>5xx：服务器错误</li>
-</ul>
-</li>
-<li><p><strong>后两位数字</strong>：表示具体的错误类型</p>
-</li>
-</ul>
-<h3 id="扩展性"><a href="#扩展性" class="headerlink" title="扩展性"></a>扩展性</h3><p>这种设计允许：</p>
-<ul>
-<li>在现有类别中添加新的状态码（如201 Created）</li>
-<li>自定义状态码（虽然不推荐）</li>
-<li>客户端可以根据第一位数字快速判断响应类型</li>
-</ul>
-<h2 id="5-为什么叫”Cookie”？"><a href="#5-为什么叫”Cookie”？" class="headerlink" title="5. 为什么叫”Cookie”？"></a>5. 为什么叫”Cookie”？</h2><p>HTTP Cookie的名字来自”magic cookie”（魔法饼干），这是Unix系统中的一个概念，指的是一小段数据，程序可以读取它，但通常不能修改。</p>
-<h3 id="命名来源"><a href="#命名来源" class="headerlink" title="命名来源"></a>命名来源</h3><p>Lou Montulli在1994年发明了HTTP Cookie。他选择这个名字是因为：</p>
-<ol>
-<li>Cookie是”magic cookie”的简称</li>
-<li>Cookie是”小甜点”，就像HTTP Cookie是”小数据片段”</li>
-<li>名字简单易记</li>
-</ol>
-<h3 id="有趣的事实"><a href="#有趣的事实" class="headerlink" title="有趣的事实"></a>有趣的事实</h3><p>Cookie的正式名称是”HTTP State Management Mechanism”（HTTP状态管理机制），但”Cookie”这个名字更流行。</p>
-<h2 id="6-为什么叫”Spam”（垃圾邮件）？"><a href="#6-为什么叫”Spam”（垃圾邮件）？" class="headerlink" title="6. 为什么叫”Spam”（垃圾邮件）？"></a>6. 为什么叫”Spam”（垃圾邮件）？</h2><p>“Spam”这个词来自Monty Python的喜剧小品，其中Spam（午餐肉罐头）在菜单上反复出现，让人厌烦。</p>
-<p>后来，这个词被用来形容：</p>
-<ul>
-<li>垃圾邮件（Email Spam）</li>
-<li>垃圾评论（Comment Spam）</li>
-<li>垃圾信息（Message Spam）</li>
-</ul>
-<h3 id="技术含义"><a href="#技术含义" class="headerlink" title="技术含义"></a>技术含义</h3><p>在编程中，”spam”通常指：</p>
-<ul>
-<li>重复发送大量无意义的消息</li>
-<li>恶意刷屏</li>
-<li>自动化攻击</li>
-</ul>
-<h2 id="7-为什么叫”Daemon”（守护进程）？"><a href="#7-为什么叫”Daemon”（守护进程）？" class="headerlink" title="7. 为什么叫”Daemon”（守护进程）？"></a>7. 为什么叫”Daemon”（守护进程）？</h2><p>在Unix&#x2F;Linux系统中，后台运行的进程叫”daemon”（守护进程）。</p>
-<h3 id="命名来源-1"><a href="#命名来源-1" class="headerlink" title="命名来源"></a>命名来源</h3><p>“Daemon”来自希腊神话中的”δαίμων”（daimon），指的是介于神和人之间的超自然存在，它们默默工作，不被人注意。</p>
-<h3 id="技术含义-1"><a href="#技术含义-1" class="headerlink" title="技术含义"></a>技术含义</h3><p>守护进程的特点：</p>
-<ul>
-<li>在后台运行</li>
-<li>没有控制终端</li>
-<li>通常以root权限运行</li>
-<li>为系统提供服务</li>
-</ul>
-<p>例如：<code>httpd</code>（Web服务器）、<code>mysqld</code>（数据库服务器）、<code>sshd</code>（SSH服务器）。</p>
-<h2 id="8-为什么叫”Ping”？"><a href="#8-为什么叫”Ping”？" class="headerlink" title="8. 为什么叫”Ping”？"></a>8. 为什么叫”Ping”？</h2><p><code>ping</code> 命令的名字来自声纳的”ping”声。</p>
-<h3 id="命名来源-2"><a href="#命名来源-2" class="headerlink" title="命名来源"></a>命名来源</h3><p>Mike Muuss在1983年编写了ping程序。他选择这个名字是因为：</p>
-<ol>
-<li>声纳发出”ping”声来探测物体</li>
-<li>ping程序发送数据包来探测网络连接</li>
-<li>两者都是”探测”的概念</li>
-</ol>
-<h3 id="技术含义-2"><a href="#技术含义-2" class="headerlink" title="技术含义"></a>技术含义</h3><p>ping的工作原理：</p>
-<ol>
-<li>发送ICMP Echo Request包</li>
-<li>等待目标主机返回ICMP Echo Reply包</li>
-<li>计算往返时间（RTT）</li>
-</ol>
-<h2 id="9-为什么叫”Stack-Overflow”？"><a href="#9-为什么叫”Stack-Overflow”？" class="headerlink" title="9. 为什么叫”Stack Overflow”？"></a>9. 为什么叫”Stack Overflow”？</h2><p>Stack Overflow（栈溢出）是一个著名的编程问答网站。</p>
-<h3 id="技术含义-3"><a href="#技术含义-3" class="headerlink" title="技术含义"></a>技术含义</h3><p>“Stack Overflow”是一个编程术语，指的是：</p>
-<ul>
-<li>当程序调用栈超出可用内存时</li>
-<li>会导致程序崩溃</li>
-<li>是一个常见的编程错误</li>
-</ul>
-<h3 id="网站命名"><a href="#网站命名" class="headerlink" title="网站命名"></a>网站命名</h3><p>网站创始人选择这个名字是因为：</p>
-<ol>
-<li>这是一个程序员都熟悉的术语</li>
-<li>暗示”问题太多，栈溢出了”</li>
-<li>容易记忆和传播</li>
-</ol>
-<h2 id="10-为什么叫”Git”？"><a href="#10-为什么叫”Git”？" class="headerlink" title="10. 为什么叫”Git”？"></a>10. 为什么叫”Git”？</h2><p>Git是一个分布式版本控制系统。</p>
-<h3 id="命名来源-3"><a href="#命名来源-3" class="headerlink" title="命名来源"></a>命名来源</h3><p>Linus Torvalds（Linux的创始人）在2005年创建了Git。他选择这个名字是因为：</p>
-<ol>
-<li>“Git”在英语俚语中是”愚蠢的人”的意思</li>
-<li>Linus自嘲地说：”I’m an egotistical bastard, and I name all my projects after myself. First ‘Linux’, now ‘Git’.”</li>
-<li>但实际上，”Git”可能是”Global Information Tracker”的缩写</li>
-</ol>
-<h3 id="有趣的事实-1"><a href="#有趣的事实-1" class="headerlink" title="有趣的事实"></a>有趣的事实</h3><p>Git的logo是一只章鱼猫（Octocat），这是GitHub的吉祥物。</p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这些技术冷知识可能不会直接影响你的代码，但它们能让你：</p>
-<ol>
-<li><strong>理解历史</strong>：了解技术术语的来源</li>
-<li><strong>加深理解</strong>：对编程概念有更深的认识</li>
-<li><strong>增加趣味</strong>：让编程变得更有趣</li>
-<li><strong>扩展知识</strong>：了解技术背后的故事</li>
-</ol>
-<hr>
-<p><strong>思考</strong>：技术不仅仅是代码，还有背后的历史、文化和故事。了解这些”冷知识”，能让我们的技术之路更加丰富多彩（而且可以冷死朋友哈哈哈）。</p>
-<p>如果你还知道其他有趣的技术冷知识，欢迎分享！毕竟学习路上，有趣一点总是好的 😊</p>
-]]></content>
-      <categories>
-        <category>随便说说</category>
-      </categories>
-      <tags>
-        <tag>随笔</tag>
-        <tag>冷知识</tag>
       </tags>
   </entry>
   <entry>
