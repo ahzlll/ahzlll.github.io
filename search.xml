@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>博客开张：记录本大学生后端开发的思考与成长</title>
+    <title>博客开张：记录我的后端开发的思考与成长</title>
     <url>/2024/11/03/2024-11-03-my-first-blog-post/</url>
     <content><![CDATA[<h2 id="写在前面"><a href="#写在前面" class="headerlink" title="写在前面"></a>写在前面</h2><p>今天是我开始写博客的第一天（终于下定决心了！）。作为一名后端开发学习者，我决定用这个博客记录我在开发过程中的思考、踩过的坑以及收获。虽然不知道能坚持多久，但至少先开始吧 😅</p>
 <h2 id="为什么要写博客？"><a href="#为什么要写博客？" class="headerlink" title="为什么要写博客？"></a>为什么要写博客？</h2><ol>
@@ -66,8 +66,9 @@
 <hr>
 <h2 id="更新-–-相关文章"><a href="#更新-–-相关文章" class="headerlink" title="更新 – 相关文章"></a>更新 – 相关文章</h2><p>这个用户中心项目系列的其他文章：</p>
 <ul>
-<li><a href="/2024/11/20/2024-11-20-login-session/">用户中心项目踩坑记 2 ：登录态管理的那些坑</a></li>
+<li><a href="/2024/11/20/2024-11-20-login-session/">用户中心项目踩坑记 2：登录态管理的那些坑</a></li>
 <li><a href="/2024/11/26/2024-11-26-user-center-database-design/">用户中心项目的数据库设计：常见问题与解决方案</a></li>
+<li><a href="/2024/11/29/2024-11-29-user-center-project-summary/">用户中心项目总结：从 0 到 1 的完整实践</a></li>
 </ul>
 ]]></content>
       <categories>
@@ -75,12 +76,72 @@
       </categories>
       <tags>
         <tag>后端开发</tag>
-        <tag>安全</tag>
+        <tag>BCrypt</tag>
         <tag>Spring Boot</tag>
+        <tag>用户中心</tag>
       </tags>
   </entry>
   <entry>
-    <title>从零开始搭建个人博客：Hexo + Butterfly 主题实践</title>
+    <title>用户中心项目踩坑记 2 ：登录态管理的那些坑</title>
+    <url>/2024/11/20/2024-11-20-login-session/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>项目又又又有问题，浏览器刷新一下就得重新登录，手机和电脑也无法共享状态。作为一个大二学生，只能说完全就是啥也不会，只能一点点地查资料。本文记录我如何把零散的 Session 改成基于 Redis 的 Token 方案，希望给也在自学的同学一点参考。</p>
+<h2 id="问题现象：登录态“稍纵即逝”"><a href="#问题现象：登录态“稍纵即逝”" class="headerlink" title="问题现象：登录态“稍纵即逝”"></a>问题现象：登录态“稍纵即逝”</h2><p>最开始我直接用 Spring Boot 自带的 <code>HttpSession</code> 保存用户对象：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request, HttpSession session)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    session.setAttribute(<span class="string">&quot;user&quot;</span>, user); <span class="comment">// 明明存了，但总丢</span></span><br><span class="line">    <span class="keyword">return</span> Result.success(user);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>随之暴露了三个痛点：</p>
+<ol>
+<li>前端用 React，刷新页面后 Session 丢失，用户得重新登录（本地两个浏览器窗口就能稳定复现）；</li>
+<li>我重启后端服务，所有用户全被踢下线（开发环境重启一次就得重新登录一遍）；</li>
+<li>同一账号 PC 登录后，手机端完全感知不到状态（我用同一 Wi-Fi 下的手机访问本地调试地址验证的）。</li>
+</ol>
+<h2 id="解决过程：Redis-Token"><a href="#解决过程：Redis-Token" class="headerlink" title="解决过程：Redis + Token"></a>解决过程：Redis + Token</h2><h3 id="1-技术选型"><a href="#1-技术选型" class="headerlink" title="1. 技术选型"></a>1. 技术选型</h3><p>我调研了三种方案：</p>
+<ul>
+<li><strong>原生 Session</strong>：依赖单机内存，重启或多实例时会混乱；</li>
+<li><strong>JWT</strong>：无状态但无法主动失效，对我现在的需求来说不好控制；</li>
+<li><strong>Redis + Token</strong>：登录后生成 Token，把用户信息放到 Redis，可控可失效，还能扩展到多节点。</li>
+</ul>
+<p>综合复杂度和可维护性，我选择第三种。</p>
+<h3 id="2-引入-Redis-依赖"><a href="#2-引入-Redis-依赖" class="headerlink" title="2. 引入 Redis 依赖"></a>2. 引入 Redis 依赖</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-配置-Redis-连接"><a href="#3-配置-Redis-连接" class="headerlink" title="3. 配置 Redis 连接"></a>3. 配置 Redis 连接</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">localhost</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<p>本地用 Docker 起了一个 Redis，正式环境也能直接复用配置。</p>
+<h3 id="4-Token-工具类"><a href="#4-Token-工具类" class="headerlink" title="4. Token 工具类"></a>4. Token 工具类</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TokenUtils</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">generateToken</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;USER_TOKEN:&quot;</span> + UUID.randomUUID().toString().replace(<span class="string">&quot;-&quot;</span>, <span class="string">&quot;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">storeToken</span><span class="params">(String token, UserDTO user)</span> &#123;</span><br><span class="line">        redisTemplate.opsForValue().set(token,</span><br><span class="line">                JSON.toJSONString(user),</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                TimeUnit.HOURS);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> UserDTO <span class="title function_">verifyToken</span><span class="params">(String token)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">userJson</span> <span class="operator">=</span> redisTemplate.opsForValue().get(token);</span><br><span class="line">        <span class="keyword">if</span> (userJson == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        redisTemplate.expire(token, <span class="number">2</span>, TimeUnit.HOURS);</span><br><span class="line">        <span class="keyword">return</span> JSON.parseObject(userJson, UserDTO.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我在这里刻意用了 <code>UserDTO</code>，把密码哈希等敏感字段去掉，避免 Redis 里存全量对象。虽然暂时还没部署，但趁早把敏感字段剥离掉也能避免后面迁移时手忙脚乱。</p>
+<h3 id="5-改造登录接口"><a href="#5-改造登录接口" class="headerlink" title="5. 改造登录接口"></a>5. 改造登录接口</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    <span class="type">UserDTO</span> <span class="variable">safeUser</span> <span class="operator">=</span> UserConvertor.toDTO(user);</span><br><span class="line">    <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> tokenUtils.generateToken(user.getId());</span><br><span class="line">    tokenUtils.storeToken(token, safeUser);</span><br><span class="line">    <span class="keyword">return</span> Result.success(<span class="keyword">new</span> <span class="title class_">LoginResponse</span>(token, safeUser));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>前端拿到 Token 后写入 <code>localStorage</code>，请求时放到 <code>Authorization</code> 头里。现阶段只是我自己在浏览器里调试，但等以后部署到测试环境只需要把基址调一下就能继续沿用。</p>
+<h3 id="6-拦截器校验登录态"><a href="#6-拦截器校验登录态" class="headerlink" title="6. 拦截器校验登录态"></a>6. 拦截器校验登录态</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">LoginInterceptor</span> <span class="keyword">implements</span> <span class="title class_">HandlerInterceptor</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> TokenUtils tokenUtils;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request,</span></span><br><span class="line"><span class="params">                             HttpServletResponse response,</span></span><br><span class="line"><span class="params">                             Object handler)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;Authorization&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.hasText(token)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;未登录&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> tokenUtils.verifyToken(token);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;登录已过期&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        UserContext.set(user); <span class="comment">// ThreadLocal 保存，方便后续获取</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在 <code>WebMvcConfigurer</code> 里把拦截器注册到需要鉴权的接口即可。</p>
+<h2 id="踩坑记录"><a href="#踩坑记录" class="headerlink" title="踩坑记录"></a>踩坑记录</h2><ul>
+<li><strong>Token 传递方式</strong>：最早放在 URL 查询参数，刷新和复制链接都会泄露，最后改成 <code>Authorization</code> 头；</li>
+<li><strong>Redis 序列化</strong>：默认 <code>JdkSerializationRedisSerializer</code> 让 Key 出现乱码，我统一改用 <code>StringRedisTemplate</code> + JSON；</li>
+<li><strong>主动下线</strong>：<code>verifyToken</code> 失败时直接抛异常，这样用户在别的设备登录会触发旧 Token 失效；</li>
+<li><strong>超时续期</strong>：每次验证成功后刷新过期时间，用户只要活跃就不会被踢。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次查了不少资料让我理解了”登录态&#x3D;如何安全记住用户”。原生 Session 在单机调试还行，但遇到多端、多实例就力不从心，更别说以后上线部署（可能有吧 。Redis + Token 虽然多写了点代码，却解决了刷新、重启、分布式和主动失效的问题。下一篇正常还会继续记录这个项目，也算是督促自己进步了，希望还能坚持写下去。</p>
+<hr>
+<h2 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h2><p>这个用户中心项目系列的其他文章：</p>
+<ul>
+<li><a href="/2024/11/15/2024-11-15-password-security/">用户中心项目踩坑记 1：密码加密那些事儿</a></li>
+<li><a href="/2024/11/26/2024-11-26-user-center-database-design/">用户中心项目的数据库设计：常见问题与解决方案</a></li>
+<li><a href="/2024/11/29/2024-11-29-user-center-project-summary/">用户中心项目总结：从 0 到 1 的完整实践</a></li>
+</ul>
+]]></content>
+      <categories>
+        <category>Debug 经验</category>
+      </categories>
+      <tags>
+        <tag>后端开发</tag>
+        <tag>用户中心</tag>
+        <tag>Session</tag>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从零开始搭建个人博客：Hexo + Butterfly</title>
     <url>/2024/11/21/2024-11-21-building-my-blog-with-hexo/</url>
     <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>一直想搭建一个个人博客，记录自己的技术成长和思考（主要是想有个地方记录踩过的坑，免得下次又忘了 😂）。经过一番调研，最终选择了 Hexo + Butterfly 主题。这篇文章记录一下搭建过程和一些踩坑经历（真的踩了好多坑…）。</p>
 <h2 id="为什么选择-Hexo？"><a href="#为什么选择-Hexo？" class="headerlink" title="为什么选择 Hexo？"></a>为什么选择 Hexo？</h2><h3 id="1-静态站点生成器"><a href="#1-静态站点生成器" class="headerlink" title="1. 静态站点生成器"></a>1. 静态站点生成器</h3><p>Hexo 是一个快速、简洁且高效的博客框架，使用 Markdown 编写文章，然后生成静态 HTML 文件。</p>
@@ -162,7 +223,7 @@
 
 <h2 id="部署流程"><a href="#部署流程" class="headerlink" title="部署流程"></a>部署流程</h2><h3 id="1-生成静态文件"><a href="#1-生成静态文件" class="headerlink" title="1. 生成静态文件"></a>1. 生成静态文件</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">hexo generate</span><br></pre></td></tr></table></figure>
 
-<h3 id="2-部署到-GitHub-Pages"><a href="#2-部署到-GitHub-Pages" class="headerlink" title="2. 部署到 GitHub Pages"></a>2. 部署到 GitHub Pages</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 安装部署插件</span></span><br><span class="line">npm install hexo-deployer-git --save</span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置</span></span><br><span class="line">deploy:</span><br><span class="line">  <span class="built_in">type</span>: git</span><br><span class="line">  repo: https://github.com/ahzlll/ahzlll.github.io.git</span><br><span class="line">  branch: master</span><br><span class="line"></span><br><span class="line"><span class="comment"># 部署</span></span><br><span class="line">hexo deploy</span><br></pre></td></tr></table></figure>
+<h3 id="2-部署到-GitHub-Pages"><a href="#2-部署到-GitHub-Pages" class="headerlink" title="2. 部署到 GitHub Pages"></a>2. 部署到 GitHub Pages</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 安装部署插件</span></span><br><span class="line">npm install hexo-deployer-git --save</span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置</span></span><br><span class="line">deploy:</span><br><span class="line">  <span class="built_in">type</span>: git</span><br><span class="line">  repo: https://github.com/ahzlll/ahzlll.github.io.git</span><br><span class="line">  branch: main</span><br><span class="line"></span><br><span class="line"><span class="comment"># 部署</span></span><br><span class="line">hexo deploy</span><br></pre></td></tr></table></figure>
 
 <h3 id="3-自动化部署"><a href="#3-自动化部署" class="headerlink" title="3. 自动化部署"></a>3. 自动化部署</h3><p>可以使用 GitHub Actions 实现自动化部署：</p>
 <figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">name:</span> <span class="string">Deploy</span> <span class="string">Blog</span></span><br><span class="line"></span><br><span class="line"><span class="attr">on:</span></span><br><span class="line">  <span class="attr">push:</span></span><br><span class="line">    <span class="attr">branches:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">source</span></span><br><span class="line"></span><br><span class="line"><span class="attr">jobs:</span></span><br><span class="line">  <span class="attr">deploy:</span></span><br><span class="line">    <span class="attr">runs-on:</span> <span class="string">ubuntu-latest</span></span><br><span class="line">    <span class="attr">steps:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">uses:</span> <span class="string">actions/checkout@v2</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">uses:</span> <span class="string">actions/setup-node@v2</span></span><br><span class="line">        <span class="attr">with:</span></span><br><span class="line">          <span class="attr">node-version:</span> <span class="string">&#x27;16&#x27;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">run:</span> <span class="string">npm</span> <span class="string">install</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">run:</span> <span class="string">hexo</span> <span class="string">generate</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">run:</span> <span class="string">hexo</span> <span class="string">deploy</span></span><br></pre></td></tr></table></figure>
@@ -198,10 +259,9 @@
         <category>技术学习</category>
       </categories>
       <tags>
-        <tag>随笔</tag>
         <tag>Hexo</tag>
         <tag>Butterfly</tag>
-        <tag>博客</tag>
+        <tag>blog</tag>
       </tags>
   </entry>
   <entry>
@@ -375,8 +435,9 @@
 <hr>
 <h2 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h2><p>这个用户中心项目系列的其他文章：</p>
 <ul>
-<li><a href="/2024/11/15/2024-11-15-password-security/">用户中心项目踩坑记 1 ：密码安全存储的那些坑</a></li>
-<li><a href="/2024/11/20/2024-11-20-login-session/">用户中心项目踩坑记 2 ：登录态管理的那些坑</a></li>
+<li><a href="/2024/11/15/2024-11-15-password-security/">用户中心项目踩坑记 1：密码加密那些事儿</a></li>
+<li><a href="/2024/11/20/2024-11-20-login-session/">用户中心项目踩坑记 2：登录态管理的那些坑</a></li>
+<li><a href="/2024/11/29/2024-11-29-user-center-project-summary/">用户中心项目总结：从 0 到 1 的完整实践</a></li>
 </ul>
 ]]></content>
       <categories>
@@ -384,8 +445,9 @@
       </categories>
       <tags>
         <tag>后端开发</tag>
-        <tag>数据库设计</tag>
         <tag>用户中心</tag>
+        <tag>Redis</tag>
+        <tag>数据库设计</tag>
         <tag>MySQL</tag>
       </tags>
   </entry>
@@ -513,9 +575,8 @@
         <category>随便说说</category>
       </categories>
       <tags>
-        <tag>技术冷知识</tag>
-        <tag>编程</tag>
-        <tag>思考</tag>
+        <tag>随笔</tag>
+        <tag>冷知识</tag>
       </tags>
   </entry>
   <entry>
@@ -537,60 +598,211 @@
 ]]></content>
   </entry>
   <entry>
-    <title>用户中心项目踩坑记 2 ：登录态管理的那些坑</title>
-    <url>/2024/11/20/2024-11-20-login-session/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>项目又又又有问题，浏览器刷新一下就得重新登录，手机和电脑也无法共享状态。作为一个大二学生，只能说完全就是啥也不会，只能一点点地查资料。本文记录我如何把零散的 Session 改成基于 Redis 的 Token 方案，希望给也在自学的同学一点参考。</p>
-<h2 id="问题现象：登录态“稍纵即逝”"><a href="#问题现象：登录态“稍纵即逝”" class="headerlink" title="问题现象：登录态“稍纵即逝”"></a>问题现象：登录态“稍纵即逝”</h2><p>最开始我直接用 Spring Boot 自带的 <code>HttpSession</code> 保存用户对象：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request, HttpSession session)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    session.setAttribute(<span class="string">&quot;user&quot;</span>, user); <span class="comment">// 明明存了，但总丢</span></span><br><span class="line">    <span class="keyword">return</span> Result.success(user);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>随之暴露了三个痛点：</p>
-<ol>
-<li>前端用 React，刷新页面后 Session 丢失，用户得重新登录（本地两个浏览器窗口就能稳定复现）；</li>
-<li>我重启后端服务，所有用户全被踢下线（开发环境重启一次就得重新登录一遍）；</li>
-<li>同一账号 PC 登录后，手机端完全感知不到状态（我用同一 Wi-Fi 下的手机访问本地调试地址验证的）。</li>
-</ol>
-<h2 id="解决过程：Redis-Token"><a href="#解决过程：Redis-Token" class="headerlink" title="解决过程：Redis + Token"></a>解决过程：Redis + Token</h2><h3 id="1-技术选型"><a href="#1-技术选型" class="headerlink" title="1. 技术选型"></a>1. 技术选型</h3><p>我调研了三种方案：</p>
+    <title>用户中心项目总结：从 0 到 1 的完整实践</title>
+    <url>/2024/11/29/2024-11-29-user-center-project-summary/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我花了大约 3 周时间完成了我的第一个完整后端项目——用户中心系统。作为一个大二学生，这个项目让我从”只会写 Hello World”到能够独立完成一个前后端分离的系统。虽然项目还没部署，代码也还有很多可以优化的地方，但这个过程让我学到了很多。今天想和大家分享一下我为什么选择这个项目，以及整个开发过程中的思考和收获。</p>
+<h2 id="为什么选择用户中心项目？"><a href="#为什么选择用户中心项目？" class="headerlink" title="为什么选择用户中心项目？"></a>为什么选择用户中心项目？</h2><h3 id="1-从”看到”到”想做”"><a href="#1-从”看到”到”想做”" class="headerlink" title="1. 从”看到”到”想做”"></a>1. 从”看到”到”想做”</h3><p>其实最开始我并没有明确的项目方向。那段时间在网上刷到很多类似的项目教程，比如”从零开始搭建用户系统”、”Spring Boot 实战项目”之类的。看多了之后，我发现用户中心项目有几个特点特别适合我这种初学者：</p>
 <ul>
-<li><strong>原生 Session</strong>：依赖单机内存，重启或多实例时会混乱；</li>
-<li><strong>JWT</strong>：无状态但无法主动失效，对我现在的需求来说不好控制；</li>
-<li><strong>Redis + Token</strong>：登录后生成 Token，把用户信息放到 Redis，可控可失效，还能扩展到多节点。</li>
+<li><strong>功能明确</strong>：注册、登录、信息管理，这些功能我作为用户每天都在用，理解起来不费劲</li>
+<li><strong>技术栈常见</strong>：Spring Boot + MySQL + Redis，这些技术网上资料多，遇到问题容易找到解决方案</li>
+<li><strong>复杂度适中</strong>：不会太简单（比如只做个计算器），也不会太复杂（比如电商系统），正好适合练手</li>
 </ul>
-<p>综合复杂度和可维护性，我选择第三种。</p>
-<h3 id="2-引入-Redis-依赖"><a href="#2-引入-Redis-依赖" class="headerlink" title="2. 引入 Redis 依赖"></a>2. 引入 Redis 依赖</h3><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-data-redis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="3-配置-Redis-连接"><a href="#3-配置-Redis-连接" class="headerlink" title="3. 配置 Redis 连接"></a>3. 配置 Redis 连接</h3><figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">redis:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">localhost</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">6379</span></span><br><span class="line">    <span class="attr">database:</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
-
-<p>本地用 Docker 起了一个 Redis，正式环境也能直接复用配置。</p>
-<h3 id="4-Token-工具类"><a href="#4-Token-工具类" class="headerlink" title="4. Token 工具类"></a>4. Token 工具类</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TokenUtils</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">generateToken</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;USER_TOKEN:&quot;</span> + UUID.randomUUID().toString().replace(<span class="string">&quot;-&quot;</span>, <span class="string">&quot;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">storeToken</span><span class="params">(String token, UserDTO user)</span> &#123;</span><br><span class="line">        redisTemplate.opsForValue().set(token,</span><br><span class="line">                JSON.toJSONString(user),</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                TimeUnit.HOURS);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> UserDTO <span class="title function_">verifyToken</span><span class="params">(String token)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">userJson</span> <span class="operator">=</span> redisTemplate.opsForValue().get(token);</span><br><span class="line">        <span class="keyword">if</span> (userJson == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        redisTemplate.expire(token, <span class="number">2</span>, TimeUnit.HOURS);</span><br><span class="line">        <span class="keyword">return</span> JSON.parseObject(userJson, UserDTO.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>我在这里刻意用了 <code>UserDTO</code>，把密码哈希等敏感字段去掉，避免 Redis 里存全量对象。虽然暂时还没部署，但趁早把敏感字段剥离掉也能避免后面迁移时手忙脚乱。</p>
-<h3 id="5-改造登录接口"><a href="#5-改造登录接口" class="headerlink" title="5. 改造登录接口"></a>5. 改造登录接口</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@PostMapping(&quot;/login&quot;)</span></span><br><span class="line"><span class="keyword">public</span> Result <span class="title function_">login</span><span class="params">(<span class="meta">@RequestBody</span> LoginRequest request)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.login(request.getAccount(), request.getPassword());</span><br><span class="line">    <span class="type">UserDTO</span> <span class="variable">safeUser</span> <span class="operator">=</span> UserConvertor.toDTO(user);</span><br><span class="line">    <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> tokenUtils.generateToken(user.getId());</span><br><span class="line">    tokenUtils.storeToken(token, safeUser);</span><br><span class="line">    <span class="keyword">return</span> Result.success(<span class="keyword">new</span> <span class="title class_">LoginResponse</span>(token, safeUser));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>前端拿到 Token 后写入 <code>localStorage</code>，请求时放到 <code>Authorization</code> 头里。现阶段只是我自己在浏览器里调试，但等以后部署到测试环境只需要把基址调一下就能继续沿用。</p>
-<h3 id="6-拦截器校验登录态"><a href="#6-拦截器校验登录态" class="headerlink" title="6. 拦截器校验登录态"></a>6. 拦截器校验登录态</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">LoginInterceptor</span> <span class="keyword">implements</span> <span class="title class_">HandlerInterceptor</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> TokenUtils tokenUtils;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request,</span></span><br><span class="line"><span class="params">                             HttpServletResponse response,</span></span><br><span class="line"><span class="params">                             Object handler)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;Authorization&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.hasText(token)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;未登录&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> tokenUtils.verifyToken(token);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;登录已过期&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        UserContext.set(user); <span class="comment">// ThreadLocal 保存，方便后续获取</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>在 <code>WebMvcConfigurer</code> 里把拦截器注册到需要鉴权的接口即可。</p>
-<h2 id="踩坑记录"><a href="#踩坑记录" class="headerlink" title="踩坑记录"></a>踩坑记录</h2><ul>
-<li><strong>Token 传递方式</strong>：最早放在 URL 查询参数，刷新和复制链接都会泄露，最后改成 <code>Authorization</code> 头；</li>
-<li><strong>Redis 序列化</strong>：默认 <code>JdkSerializationRedisSerializer</code> 让 Key 出现乱码，我统一改用 <code>StringRedisTemplate</code> + JSON；</li>
-<li><strong>主动下线</strong>：<code>verifyToken</code> 失败时直接抛异常，这样用户在别的设备登录会触发旧 Token 失效；</li>
-<li><strong>超时续期</strong>：每次验证成功后刷新过期时间，用户只要活跃就不会被踢。</li>
+<p>所以我就决定：就做这个了！</p>
+<h3 id="2-软件工程导论的启发"><a href="#2-软件工程导论的启发" class="headerlink" title="2. 软件工程导论的启发"></a>2. 软件工程导论的启发</h3><p>这学期我们开了《软件工程导论》这门课，虽然理论居多，但让我知道了做项目不是直接写代码，而是要先分析需求、设计架构、画数据库表、定义接口…这些步骤。</p>
+<p>所以我想按照课程里学到的方法，一步步来：</p>
+<ol>
+<li><strong>需求分析</strong>：先想清楚要做什么功能</li>
+<li><strong>技术选型</strong>：选什么框架、什么数据库</li>
+<li><strong>架构设计</strong>：系统怎么分层，模块怎么划分</li>
+<li><strong>数据库设计</strong>：表结构怎么设计，字段怎么定义</li>
+<li><strong>API 设计</strong>：接口路径、参数、返回值</li>
+<li><strong>编码实现</strong>：把设计变成代码</li>
+<li><strong>测试优化</strong>：跑通功能，优化性能</li>
+</ol>
+<p>虽然最后做的时候还是踩了很多坑，但有了这个思路，至少不会完全不知道从哪开始。</p>
+<h2 id="项目流程回顾"><a href="#项目流程回顾" class="headerlink" title="项目流程回顾"></a>项目流程回顾</h2><h3 id="1-需求分析阶段"><a href="#1-需求分析阶段" class="headerlink" title="1. 需求分析阶段"></a>1. 需求分析阶段</h3><p>最开始我花了两天时间梳理需求。虽然用户中心听起来简单，但真要写下来，还是有不少细节要考虑：</p>
+<p><strong>核心功能</strong>：</p>
+<ul>
+<li><strong>用户注册</strong>：账户密码校验、重复检查（用户名、邮箱、手机号不能重复）</li>
+<li><strong>用户登录</strong>：身份验证、登录态管理（Token 机制）</li>
+<li><strong>用户信息管理</strong>：查看、修改个人信息</li>
+<li><strong>用户管理</strong>（管理员功能）：查询用户列表、修改用户信息、删除用户</li>
+<li><strong>权限控制</strong>：区分普通用户和管理员，不同角色能访问的接口不同</li>
 </ul>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次查了不少资料让我理解了”登录态&#x3D;如何安全记住用户”。原生 Session 在单机调试还行，但遇到多端、多实例就力不从心，更别说以后上线部署（可能有吧 。Redis + Token 虽然多写了点代码，却解决了刷新、重启、分布式和主动失效的问题。下一篇正常还会继续记录这个项目，也算是督促自己进步了，希望还能坚持写下去。</p>
+<p><strong>非功能需求</strong>：</p>
+<ul>
+<li>密码要加密存储（不能明文）</li>
+<li>登录态要支持多端（PC、手机都能登录）</li>
+<li>接口要统一返回格式，方便前端处理</li>
+<li>异常要统一处理，不能直接返回堆栈信息</li>
+</ul>
+<h3 id="2-技术选型阶段"><a href="#2-技术选型阶段" class="headerlink" title="2. 技术选型阶段"></a>2. 技术选型阶段</h3><p>选技术的时候我主要考虑两个因素：<strong>学习成本</strong>和<strong>资料丰富度</strong>。毕竟我是自学，如果还选个冷门技术，遇到问题找不到资料就很麻烦。</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>技术选择</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>后端框架</td>
+<td>Spring Boot</td>
+<td>上手快，生态完善，网上教程多</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td>MySQL</td>
+<td>关系型数据库，适合存储用户信息，学习成本低</td>
+</tr>
+<tr>
+<td>ORM</td>
+<td>MyBatis-Plus</td>
+<td>简化 CRUD 操作，自动生成代码，减少重复工作</td>
+</tr>
+<tr>
+<td>登录态管理</td>
+<td>Redis + Token</td>
+<td>支持分布式，可主动失效，比 Session 灵活</td>
+</tr>
+<tr>
+<td>前端</td>
+<td>React + Ant Design</td>
+<td>组件丰富，适合做管理系统界面</td>
+</tr>
+<tr>
+<td>密码加密</td>
+<td>BCrypt</td>
+<td>安全性高，Spring Security 内置支持</td>
+</tr>
+</tbody></table>
+<h3 id="3-架构设计阶段"><a href="#3-架构设计阶段" class="headerlink" title="3. 架构设计阶段"></a>3. 架构设计阶段</h3><p>虽然项目不大，但我还是简单画了一下架构图（用 draw.io 画的，比较简单）：</p>
+<p><img src="/img/ahzUserhub-archDiagram.png" alt="系统架构示意图"></p>
+<p><strong>分层设计</strong>：</p>
+<ul>
+<li><strong>Controller 层</strong>：接收 HTTP 请求，参数校验，返回统一格式的响应</li>
+<li><strong>Service 层</strong>：业务逻辑处理，比如登录验证、密码加密、Token 生成</li>
+<li><strong>Mapper 层</strong>：数据库 CRUD 操作，使用 MyBatis-Plus 简化</li>
+</ul>
+<p><strong>关键组件</strong>：</p>
+<ul>
+<li><strong>拦截器</strong>：统一处理 Token 验证、权限校验</li>
+<li><strong>全局异常处理器</strong>：统一处理异常，返回友好错误信息</li>
+<li><strong>工具类</strong>：Token 生成、密码加密、用户上下文（ThreadLocal）</li>
+</ul>
+<h3 id="4-数据库设计阶段"><a href="#4-数据库设计阶段" class="headerlink" title="4. 数据库设计阶段"></a>4. 数据库设计阶段</h3><p>数据库设计我花了不少时间，因为这是第一次自己设计表结构。我参考了一些开源项目的设计，也看了很多数据库设计的文章（后来我还专门写了一篇<a href="/2024/11/26/2024-11-26-user-center-database-design/">《用户中心项目的数据库设计：常见问题与解决方案》</a>来总结）。</p>
+<p><strong>核心表设计</strong>：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 用户表（核心表）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> `<span class="keyword">user</span>` (</span><br><span class="line">  `user_id` <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span> AUTO_INCREMENT COMMENT <span class="string">&#x27;用户ID&#x27;</span>,</span><br><span class="line">  `username` <span class="type">VARCHAR</span>(<span class="number">50</span>) <span class="keyword">UNIQUE</span> COMMENT <span class="string">&#x27;用户名&#x27;</span>,</span><br><span class="line">  `email` <span class="type">VARCHAR</span>(<span class="number">100</span>) <span class="keyword">UNIQUE</span> COMMENT <span class="string">&#x27;邮箱&#x27;</span>,</span><br><span class="line">  `phone` <span class="type">VARCHAR</span>(<span class="number">20</span>) <span class="keyword">UNIQUE</span> COMMENT <span class="string">&#x27;手机号&#x27;</span>,</span><br><span class="line">  `password_hash` <span class="type">CHAR</span>(<span class="number">60</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;密码哈希(bcrypt)&#x27;</span>,</span><br><span class="line">  `user_role` ENUM(<span class="string">&#x27;user&#x27;</span>, <span class="string">&#x27;admin&#x27;</span>) <span class="keyword">DEFAULT</span> <span class="string">&#x27;user&#x27;</span> COMMENT <span class="string">&#x27;角色&#x27;</span>,</span><br><span class="line">  `status` ENUM(<span class="string">&#x27;active&#x27;</span>, <span class="string">&#x27;inactive&#x27;</span>, <span class="string">&#x27;banned&#x27;</span>) <span class="keyword">DEFAULT</span> <span class="string">&#x27;inactive&#x27;</span> COMMENT <span class="string">&#x27;状态&#x27;</span>,</span><br><span class="line">  `created_at` DATETIME <span class="keyword">DEFAULT</span> <span class="built_in">CURRENT_TIMESTAMP</span> COMMENT <span class="string">&#x27;创建时间&#x27;</span>,</span><br><span class="line">  `updated_at` DATETIME <span class="keyword">DEFAULT</span> <span class="built_in">CURRENT_TIMESTAMP</span> <span class="keyword">ON</span> <span class="keyword">UPDATE</span> <span class="built_in">CURRENT_TIMESTAMP</span> COMMENT <span class="string">&#x27;更新时间&#x27;</span>,</span><br><span class="line">  `is_delete` TINYINT <span class="keyword">DEFAULT</span> <span class="number">0</span> COMMENT <span class="string">&#x27;逻辑删除标记&#x27;</span>,</span><br><span class="line">  INDEX `idx_email` (`email`),</span><br><span class="line">  INDEX `idx_phone` (`phone`)</span><br><span class="line">) COMMENT<span class="operator">=</span><span class="string">&#x27;用户基本信息表&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>设计考虑</strong>：</p>
+<ul>
+<li>用 <code>UNIQUE</code> 保证用户名、邮箱、手机号唯一</li>
+<li>给邮箱、手机号建索引，登录时查询快</li>
+<li>用 <code>ENUM</code> 限制角色和状态的值，避免脏数据</li>
+<li>用逻辑删除（<code>is_delete</code>）而不是物理删除，数据可以恢复</li>
+</ul>
+<h3 id="5-API-设计阶段"><a href="#5-API-设计阶段" class="headerlink" title="5. API 设计阶段"></a>5. API 设计阶段</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">用户相关接口：</span><br><span class="line">POST   /api/user/register          # 用户注册</span><br><span class="line">POST   /api/user/login              # 用户登录</span><br><span class="line">GET    /api/user/getInfo            # 获取当前用户信息</span><br><span class="line">POST   /api/user/updateInfo         # 更新用户信息</span><br><span class="line">POST   /api/user/logout             # 退出登录</span><br><span class="line"></span><br><span class="line">管理员接口：</span><br><span class="line">GET    /api/admin/getUserList       # 获取用户列表</span><br><span class="line">GET    /api/admin/getUserById       # 获取用户详情</span><br><span class="line">POST   /api/admin/updateUser        # 更新用户信息</span><br><span class="line">POST   /api/admin/deleteUser        # 删除用户</span><br></pre></td></tr></table></figure>
+
+<p>现在回头看，接口设计确实有很多问题：</p>
+<ul>
+<li><strong>路径命名不统一</strong>：有些用层级结构（<code>/api/user/register</code>），有些用动词+名词（<code>/api/admin/getUserList</code>）</li>
+<li><strong>HTTP 方法用得不对</strong>：更新和删除应该用 PUT 和 DELETE，但我都用 POST 了</li>
+<li><strong>参数传递方式混乱</strong>：<code>getUserById</code> 用查询参数传 ID，<code>updateUser</code> 和 <code>deleteUser</code> 又在请求体里传 userId，一点都不统一</li>
+<li><strong>GET 请求传参不规范</strong>：<code>getUserById</code> 应该用路径参数 <code>/api/admin/user/&#123;id&#125;</code> 更规范</li>
+</ul>
+<p>不过当时能跑起来就行，后面我应该会写一篇关于学到的 RESTful API 设计方法。</p>
+<p><strong>统一返回格式</strong>：<br>唯一做得比较规范的是统一返回格式，所有接口都返回 <code>Result&lt;T&gt;</code> 格式，这样前端处理起来方便：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="string">&quot;code&quot;</span>: <span class="number">0</span>,           <span class="comment">// 0 表示成功，非 0 表示失败</span></span><br><span class="line">  <span class="string">&quot;data&quot;</span>: &#123;...&#125;,       <span class="comment">// 数据</span></span><br><span class="line">  <span class="string">&quot;message&quot;</span>: <span class="string">&quot;ok&quot;</span>      <span class="comment">// 消息</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-开发实现阶段"><a href="#6-开发实现阶段" class="headerlink" title="6. 开发实现阶段"></a>6. 开发实现阶段</h3><p>这个阶段是最痛苦的，也是收获最多的。我遇到了很多问题，也解决了很多问题：</p>
+<p><strong>问题 1：密码安全存储</strong></p>
+<p>最开始我直接把密码存到数据库，后来意识到安全问题，改成了 BCrypt 加密。这个过程我专门写了一篇文章记录（见<a href="/2024/11/15/2024-11-15-password-security/">《用户中心项目踩坑记 1：密码加密那些事儿》</a>）。</p>
+<p><strong>问题 2：登录态管理</strong></p>
+<p>最开始用 Session，结果刷新页面就丢失，多端也无法共享。后来改成 Redis + Token 方案，解决了这些问题。这个过程我也写了文章（见<a href="/2024/11/20/2024-11-20-login-session/">《用户中心项目踩坑记 2：登录态管理的那些坑》</a>）。</p>
+<p><strong>问题 3：跨域问题</strong></p>
+<p>前后端分离开发，前端运行在 <code>localhost:3000</code>，后端运行在 <code>localhost:8080</code>，浏览器会报跨域错误。我通过配置 CORS 解决了：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">CorsConfig</span> <span class="keyword">implements</span> <span class="title class_">WebMvcConfigurer</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">addCorsMappings</span><span class="params">(CorsRegistry registry)</span> &#123;</span><br><span class="line">        registry.addMapping(<span class="string">&quot;/api/**&quot;</span>)</span><br><span class="line">                .allowedOrigins(<span class="string">&quot;http://localhost:3000&quot;</span>)</span><br><span class="line">                .allowedMethods(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;POST&quot;</span>, <span class="string">&quot;PUT&quot;</span>, <span class="string">&quot;DELETE&quot;</span>)</span><br><span class="line">                .allowedHeaders(<span class="string">&quot;*&quot;</span>)</span><br><span class="line">                .allowCredentials(<span class="literal">true</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>问题 4：权限控制</strong></p>
+<p>普通用户和管理员能访问的接口不同，我通过拦截器实现：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">LoginInterceptor</span> <span class="keyword">implements</span> <span class="title class_">HandlerInterceptor</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">preHandle</span><span class="params">(HttpServletRequest request, </span></span><br><span class="line"><span class="params">                             HttpServletResponse response, </span></span><br><span class="line"><span class="params">                             Object handler)</span> &#123;</span><br><span class="line">        <span class="comment">// 1. 验证 Token</span></span><br><span class="line">        <span class="type">String</span> <span class="variable">token</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;Authorization&quot;</span>);</span><br><span class="line">        <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> tokenUtils.verifyToken(token);</span><br><span class="line">        <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;未登录&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 2. 权限校验（管理员接口需要 admin 角色）</span></span><br><span class="line">        <span class="keyword">if</span> (request.getRequestURI().startsWith(<span class="string">&quot;/api/admin&quot;</span>)) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!<span class="string">&quot;admin&quot;</span>.equals(user.getUserRole())) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BusinessException</span>(<span class="string">&quot;无权限&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 3. 保存用户信息到 ThreadLocal</span></span><br><span class="line">        UserContext.set(user);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-测试与优化阶段"><a href="#7-测试与优化阶段" class="headerlink" title="7. 测试与优化阶段"></a>7. 测试与优化阶段</h3><p><strong>单元测试</strong>：<br>虽然测试写得不多，但至少给核心接口写了测试用例，比如登录、注册：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@SpringBootTest</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">UserControllerTest</span> &#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> UserController userController;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Test</span></span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">testLogin</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">LoginRequest</span> <span class="variable">request</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">LoginRequest</span>();</span><br><span class="line">        request.setAccount(<span class="string">&quot;test@example.com&quot;</span>);</span><br><span class="line">        request.setPassword(<span class="string">&quot;123456&quot;</span>);</span><br><span class="line">        </span><br><span class="line">        Result&lt;LoginResponse&gt; result = userController.login(request);</span><br><span class="line">        assertEquals(<span class="number">0</span>, result.getCode());</span><br><span class="line">        assertNotNull(result.getData().getToken());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>性能优化</strong>：</p>
+<ul>
+<li>给用户表的邮箱、手机号字段建了索引，登录查询快了很多</li>
+<li>登录成功后把用户信息存到 Redis，减少数据库查询</li>
+</ul>
+<p><strong>异常处理</strong>：<br>写了全局异常处理器，统一处理异常：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@RestControllerAdvice</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">GlobalExceptionHandler</span> &#123;</span><br><span class="line">    <span class="meta">@ExceptionHandler(BusinessException.class)</span></span><br><span class="line">    <span class="keyword">public</span> Result&lt;Void&gt; <span class="title function_">handleBusinessException</span><span class="params">(BusinessException e)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.error(e.getMessage());</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@ExceptionHandler(Exception.class)</span></span><br><span class="line">    <span class="keyword">public</span> Result&lt;Void&gt; <span class="title function_">handleException</span><span class="params">(Exception e)</span> &#123;</span><br><span class="line">        log.error(<span class="string">&quot;系统异常&quot;</span>, e);</span><br><span class="line">        <span class="keyword">return</span> Result.error(<span class="string">&quot;系统繁忙，请稍后再试&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="核心技术实现"><a href="#核心技术实现" class="headerlink" title="核心技术实现"></a>核心技术实现</h2><h3 id="1-通用返回结果封装"><a href="#1-通用返回结果封装" class="headerlink" title="1. 通用返回结果封装"></a>1. 通用返回结果封装</h3><p>所有接口都返回统一的 <code>Result&lt;T&gt;</code> 格式：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Data</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Result</span>&lt;T&gt; &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">int</span> code;        <span class="comment">// 业务状态码：0 表示成功，非 0 表示失败</span></span><br><span class="line">    <span class="keyword">private</span> T data;          <span class="comment">// 数据</span></span><br><span class="line">    <span class="keyword">private</span> String message;  <span class="comment">// 消息</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 成功返回</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; Result&lt;T&gt; <span class="title function_">success</span><span class="params">(T data)</span> &#123;</span><br><span class="line">        Result&lt;T&gt; result = <span class="keyword">new</span> <span class="title class_">Result</span>&lt;&gt;();</span><br><span class="line">        result.setCode(<span class="number">0</span>);</span><br><span class="line">        result.setData(data);</span><br><span class="line">        result.setMessage(<span class="string">&quot;ok&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 错误返回</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; Result&lt;T&gt; <span class="title function_">error</span><span class="params">(String message)</span> &#123;</span><br><span class="line">        Result&lt;T&gt; result = <span class="keyword">new</span> <span class="title class_">Result</span>&lt;&gt;();</span><br><span class="line">        result.setCode(<span class="number">500</span>);</span><br><span class="line">        result.setData(<span class="literal">null</span>);</span><br><span class="line">        result.setMessage(message);</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-Token-工具类"><a href="#2-Token-工具类" class="headerlink" title="2. Token 工具类"></a>2. Token 工具类</h3><p>基于 Redis 的 Token 管理：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TokenUtils</span> &#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> StringRedisTemplate redisTemplate;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 生成 Token</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">generateToken</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;USER_TOKEN:&quot;</span> + UUID.randomUUID().toString().replace(<span class="string">&quot;-&quot;</span>, <span class="string">&quot;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 存储 Token 和用户信息（2小时过期）</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">storeToken</span><span class="params">(String token, UserDTO user)</span> &#123;</span><br><span class="line">        redisTemplate.opsForValue().set(</span><br><span class="line">            token,</span><br><span class="line">            JSON.toJSONString(user),</span><br><span class="line">            <span class="number">2</span>,</span><br><span class="line">            TimeUnit.HOURS</span><br><span class="line">        );</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 验证 Token 并自动续期</span></span><br><span class="line">    <span class="keyword">public</span> UserDTO <span class="title function_">verifyToken</span><span class="params">(String token)</span> &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">userJson</span> <span class="operator">=</span> redisTemplate.opsForValue().get(token);</span><br><span class="line">        <span class="keyword">if</span> (userJson == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 验证成功后自动续期</span></span><br><span class="line">        redisTemplate.expire(token, <span class="number">2</span>, TimeUnit.HOURS);</span><br><span class="line">        <span class="keyword">return</span> JSON.parseObject(userJson, UserDTO.class);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-用户上下文（ThreadLocal）"><a href="#3-用户上下文（ThreadLocal）" class="headerlink" title="3. 用户上下文（ThreadLocal）"></a>3. 用户上下文（ThreadLocal）</h3><p>方便在 Service 层获取当前登录用户：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">UserContext</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> ThreadLocal&lt;UserDTO&gt; userHolder = <span class="keyword">new</span> <span class="title class_">ThreadLocal</span>&lt;&gt;();</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">set</span><span class="params">(UserDTO user)</span> &#123;</span><br><span class="line">        userHolder.set(user);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> UserDTO <span class="title function_">get</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> userHolder.get();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">clear</span><span class="params">()</span> &#123;</span><br><span class="line">        userHolder.remove();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="收获与反思"><a href="#收获与反思" class="headerlink" title="收获与反思"></a>收获与反思</h2><h3 id="学到的技术"><a href="#学到的技术" class="headerlink" title="学到的技术"></a>学到的技术</h3><ol>
+<li><strong>Spring Boot 核心功能</strong>：注解、配置、拦截器、异常处理</li>
+<li><strong>MyBatis-Plus</strong>：简化数据库操作，自动生成代码</li>
+<li><strong>Redis</strong>：缓存、Token 存储、分布式支持</li>
+<li><strong>前后端分离开发</strong>：接口设计、跨域处理、Token 传递</li>
+<li><strong>数据库设计</strong>：表结构设计、索引优化、逻辑删除</li>
+</ol>
+<h3 id="不足与改进"><a href="#不足与改进" class="headerlink" title="不足与改进"></a>不足与改进</h3><ol>
+<li><strong>测试覆盖不够</strong>：只写了核心接口的测试，边界情况考虑不全</li>
+<li><strong>代码复用性</strong>：部分逻辑存在冗余，可以提取成公共方法</li>
+<li><strong>接口限流</strong>：没有实现限流，高并发场景下可能出问题</li>
+<li><strong>日志记录</strong>：日志记录不够完善，出问题时排查困难</li>
+<li><strong>安全性</strong>：虽然用了 BCrypt 和 Token，但还有很多安全措施没做（比如接口限流、防 SQL 注入等）</li>
+</ol>
+<h3 id="后续计划"><a href="#后续计划" class="headerlink" title="后续计划"></a>后续计划</h3><p>虽然项目基本功能都实现了，但还有很多可以改进的地方：</p>
+<ol>
+<li><p><strong>功能扩展</strong>：</p>
+<ul>
+<li>接入短信验证码，增强注册安全性</li>
+<li>实现用户头像上传功能</li>
+<li>添加用户登录日志，方便分析异常登录</li>
+</ul>
+</li>
+<li><p><strong>技术提升</strong>：</p>
+<ul>
+<li>学习 Docker，把项目容器化</li>
+<li>学习 Nginx，做反向代理和负载均衡</li>
+<li>把项目部署到云服务器，让其他人也能访问</li>
+</ul>
+</li>
+<li><p><strong>代码优化</strong>：</p>
+<ul>
+<li>提高测试覆盖率</li>
+<li>优化代码结构，提高复用性</li>
+<li>接入接口限流，防止恶意请求</li>
+</ul>
+</li>
+</ol>
+<h2 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h2><p>作为第一个完整项目，过程虽然磕磕绊绊，但收获远超预期。从最初连数据库连接都配置不好，到现在能独立解决加密、登录态、跨域等问题，真切感受到了”实践”的力量。</p>
+<p>这个项目让我明白，<strong>理论很重要，但实践更关键</strong>。看再多教程，不如自己动手做一遍。遇到问题、解决问题、总结经验，这个过程让我成长了很多。</p>
+<p>虽然项目还没部署，代码也还有很多可以优化的地方，但至少我迈出了第一步。路还很长，继续加油！</p>
 <hr>
 <h2 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h2><p>这个用户中心项目系列的其他文章：</p>
 <ul>
-<li><a href="/2024/11/15/2024-11-15-password-security/">用户中心项目踩坑记 1 ：密码安全存储的那些坑</a></li>
+<li><a href="/2024/11/15/2024-11-15-password-security/">用户中心项目踩坑记 1：密码加密那些事儿</a></li>
+<li><a href="/2024/11/20/2024-11-20-login-session/">用户中心项目踩坑记 2：登录态管理的那些坑</a></li>
 <li><a href="/2024/11/26/2024-11-26-user-center-database-design/">用户中心项目的数据库设计：常见问题与解决方案</a></li>
 </ul>
 ]]></content>
       <categories>
-        <category>Debug 经验</category>
+        <category>后端开发思考</category>
       </categories>
       <tags>
         <tag>后端开发</tag>
-        <tag>Session</tag>
-        <tag>Redis</tag>
+        <tag>Spring Boot</tag>
+        <tag>用户中心</tag>
       </tags>
   </entry>
 </search>
