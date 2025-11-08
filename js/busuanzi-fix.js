@@ -12,9 +12,9 @@
   // 如果未配置，将使用 localStorage 作为降级方案
   const LEANCLOUD_CONFIG = {
     enabled: true,  // 设置为 true 启用 LeanCloud
-    appId: '',       // 请填写您的 LeanCloud App ID
-    appKey: '',      // 请填写您的 LeanCloud App Key
-    serverURL: ''    // 请填写您的 LeanCloud Server URL（可选，如果使用自定义域名）
+    appId: 'J1xagyFz7FPaUDVlp57KczSZ-gzGzoHsz',       // 请填写您的 LeanCloud App ID
+    appKey: '0cfsYVrejqW6VcHo1Ys35XyS',      // 请填写您的 LeanCloud App Key
+    serverURL: 'https://{J1xagyFz7FPaUDVlp57KczSZ-gzGzoHsz}.api.lncld.net'    // 请填写您的 LeanCloud Server URL（可选，如果使用自定义域名）
   };
 
   // 检查 LeanCloud 配置是否有效
