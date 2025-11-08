@@ -54,6 +54,7 @@ class TypingEffect {
     this.deletingSpeed = 50; // 删除速度（毫秒）
     this.pauseTime = 2000; // 显示完整句子后的暂停时间（毫秒）
     this.pauseAfterDelete = 500; // 删除完成后的暂停时间（毫秒）
+    this.timeoutId = null; // 存储当前定时器 ID
   }
 
   // 随机选择一句名言（从随机句子数组中）
@@ -74,11 +75,11 @@ class TypingEffect {
         this.isDeleting = false;
         this.currentQuote = this.getRandomQuote();
         
-        setTimeout(() => this.type(), this.pauseAfterDelete);
+        this.timeoutId = setTimeout(() => this.type(), this.pauseAfterDelete);
         return;
       }
       
-      setTimeout(() => this.type(), this.deletingSpeed);
+      this.timeoutId = setTimeout(() => this.type(), this.deletingSpeed);
     } else {
       // 打字模式
       this.element.textContent = this.currentQuote.substring(0, this.currentCharIndex + 1);
@@ -92,11 +93,19 @@ class TypingEffect {
         
         // 暂停后开始删除
         this.isDeleting = true;
-        setTimeout(() => this.type(), this.pauseTime);
+        this.timeoutId = setTimeout(() => this.type(), this.pauseTime);
         return;
       }
       
-      setTimeout(() => this.type(), this.typingSpeed);
+      this.timeoutId = setTimeout(() => this.type(), this.typingSpeed);
+    }
+  }
+  
+  // 停止打字机效果
+  stop() {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
   }
 
@@ -115,7 +124,13 @@ class TypingEffect {
 function initTypingEffect() {
   const typingElement = document.getElementById('typing-text');
   if (typingElement) {
+    // 如果已经存在打字机实例，先停止它
+    if (typingElement.typingEffectInstance) {
+      typingElement.typingEffectInstance.stop();
+    }
+    // 创建新的打字机实例
     const typingEffect = new TypingEffect(typingElement, firstQuote, backendQuotes);
+    typingElement.typingEffectInstance = typingEffect;
     typingEffect.start();
   }
 }
@@ -124,11 +139,13 @@ function initTypingEffect() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initTypingEffect);
 } else {
-  initTypingEffect();
+  // 延迟一点执行，确保 DOM 完全加载
+  setTimeout(initTypingEffect, 100);
 }
 
 // 如果使用 PJAX，需要在页面切换时重新初始化
-if (window.pjax) {
-  document.addEventListener('pjax:complete', initTypingEffect);
-}
+document.addEventListener('pjax:complete', () => {
+  // 延迟执行，确保 PJAX 切换后的 DOM 完全更新
+  setTimeout(initTypingEffect, 100);
+});
 

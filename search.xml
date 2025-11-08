@@ -206,6 +206,78 @@
       </tags>
   </entry>
   <entry>
+    <title>代码审查中的一些思考</title>
+    <url>/2024/12/25/2024-12-25-reflection-on-code-review/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>最近参与了很多代码审查，发现了一些共性问题。想记录一下自己的思考，也希望能帮助到其他开发者。</p>
+<h2 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h2><h3 id="1-异常处理不当"><a href="#1-异常处理不当" class="headerlink" title="1. 异常处理不当"></a>1. 异常处理不当</h3><p><strong>问题代码</strong>：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        orderService.save(order);</span><br><span class="line">        emailService.sendEmail(order.getUserEmail());</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="comment">// 吞掉异常，没有任何日志</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>问题</strong>：</p>
+<ul>
+<li>捕获了所有异常，但没有任何处理</li>
+<li>没有日志，出问题无法排查</li>
+<li>可能导致数据不一致（订单保存了，但邮件没发）</li>
+</ul>
+<p><strong>改进</strong>：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        orderService.save(order);</span><br><span class="line">        emailService.sendEmail(order.getUserEmail());</span><br><span class="line">    &#125; <span class="keyword">catch</span> (EmailException e) &#123;</span><br><span class="line">        <span class="comment">// 邮件发送失败不影响订单，记录日志即可</span></span><br><span class="line">        log.error(<span class="string">&quot;订单&#123;&#125;邮件发送失败&quot;</span>, order.getId(), e);</span><br><span class="line">        <span class="comment">// 可以考虑异步重试或加入消息队列</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="comment">// 其他异常需要处理</span></span><br><span class="line">        log.error(<span class="string">&quot;订单处理失败&quot;</span>, e);</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">OrderProcessException</span>(<span class="string">&quot;订单处理失败&quot;</span>, e);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-魔法数字和字符串"><a href="#2-魔法数字和字符串" class="headerlink" title="2. 魔法数字和字符串"></a>2. 魔法数字和字符串</h3><p><strong>问题代码</strong>：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> (status == <span class="number">1</span>) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> (status == <span class="number">2</span>) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (type.equals(<span class="string">&quot;VIP&quot;</span>)) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>改进</strong>：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 使用枚举</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">enum</span> <span class="title class_">OrderStatus</span> &#123;</span><br><span class="line">    PENDING(<span class="number">1</span>, <span class="string">&quot;待处理&quot;</span>),</span><br><span class="line">    PROCESSING(<span class="number">2</span>, <span class="string">&quot;处理中&quot;</span>),</span><br><span class="line">    COMPLETED(<span class="number">3</span>, <span class="string">&quot;已完成&quot;</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="type">int</span> code;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> String desc;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用常量</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">USER_TYPE_VIP</span> <span class="operator">=</span> <span class="string">&quot;VIP&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (order.getStatus() == OrderStatus.PENDING) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-方法过长，职责不清"><a href="#3-方法过长，职责不清" class="headerlink" title="3. 方法过长，职责不清"></a>3. 方法过长，职责不清</h3><p><strong>问题代码</strong>：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="comment">// 验证订单</span></span><br><span class="line">    <span class="keyword">if</span> (order == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (order.getAmount() &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// ... 50行验证代码</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 保存订单</span></span><br><span class="line">    order.setCreateTime(<span class="keyword">new</span> <span class="title class_">Date</span>());</span><br><span class="line">    order.setStatus(OrderStatus.PENDING);</span><br><span class="line">    orderMapper.insert(order);</span><br><span class="line">    <span class="comment">// ... 30行保存逻辑</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 发送通知</span></span><br><span class="line">    emailService.sendEmail(...);</span><br><span class="line">    smsService.sendSms(...);</span><br><span class="line">    <span class="comment">// ... 20行通知逻辑</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 更新库存</span></span><br><span class="line">    inventoryService.update(...);</span><br><span class="line">    <span class="comment">// ... 30行库存逻辑</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>改进</strong>：拆分成多个方法，每个方法职责单一</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    validateOrder(order);</span><br><span class="line">    saveOrder(order);</span><br><span class="line">    sendNotifications(order);</span><br><span class="line">    updateInventory(order);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">validateOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="comment">// 验证逻辑</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">saveOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="comment">// 保存逻辑</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ...</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-缺少空值检查"><a href="#4-缺少空值检查" class="headerlink" title="4. 缺少空值检查"></a>4. 缺少空值检查</h3><p><strong>问题代码</strong>：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> String <span class="title function_">getUserName</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userMapper.selectById(userId);</span><br><span class="line">    <span class="keyword">return</span> user.getName(); <span class="comment">// 如果user为null，会抛NPE</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>改进</strong>：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> String <span class="title function_">getUserName</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userMapper.selectById(userId);</span><br><span class="line">    <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">UserNotFoundException</span>(<span class="string">&quot;用户不存在: &quot;</span> + userId);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> user.getName();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 或者使用Optional</span></span><br><span class="line"><span class="keyword">public</span> Optional&lt;String&gt; <span class="title function_">getUserName</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> Optional.ofNullable(userMapper.selectById(userId))</span><br><span class="line">                   .map(User::getName);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-硬编码配置"><a href="#5-硬编码配置" class="headerlink" title="5. 硬编码配置"></a>5. 硬编码配置</h3><p><strong>问题代码</strong>：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">sendEmail</span><span class="params">(String to, String content)</span> &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">smtpHost</span> <span class="operator">=</span> <span class="string">&quot;smtp.163.com&quot;</span>;</span><br><span class="line">    <span class="type">int</span> <span class="variable">smtpPort</span> <span class="operator">=</span> <span class="number">25</span>;</span><br><span class="line">    <span class="type">String</span> <span class="variable">username</span> <span class="operator">=</span> <span class="string">&quot;admin@163.com&quot;</span>;</span><br><span class="line">    <span class="type">String</span> <span class="variable">password</span> <span class="operator">=</span> <span class="string">&quot;123456&quot;</span>;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>改进</strong>：使用配置文件</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># application.yml</span></span><br><span class="line"><span class="attr">email:</span></span><br><span class="line">  <span class="attr">smtp:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">smtp.163.com</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">25</span></span><br><span class="line">  <span class="attr">username:</span> <span class="string">$&#123;EMAIL_USERNAME&#125;</span></span><br><span class="line">  <span class="attr">password:</span> <span class="string">$&#123;EMAIL_PASSWORD&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="代码审查的原则"><a href="#代码审查的原则" class="headerlink" title="代码审查的原则"></a>代码审查的原则</h2><ol>
+<li><strong>对事不对人</strong>：指出问题，不要攻击人</li>
+<li><strong>给出建议</strong>：不仅要指出问题，还要给出改进建议</li>
+<li><strong>关注重点</strong>：优先关注逻辑错误、安全问题、性能问题</li>
+<li><strong>及时反馈</strong>：不要等到最后才审查，要持续审查</li>
+</ol>
+<h2 id="如何写好代码"><a href="#如何写好代码" class="headerlink" title="如何写好代码"></a>如何写好代码</h2><ol>
+<li><strong>单一职责</strong>：每个类、每个方法只做一件事</li>
+<li><strong>命名清晰</strong>：变量名、方法名要能表达意图</li>
+<li><strong>异常处理</strong>：不要吞掉异常，要适当处理和记录</li>
+<li><strong>代码复用</strong>：提取公共逻辑，避免重复</li>
+<li><strong>测试覆盖</strong>：重要逻辑要有单元测试</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>代码审查是提高代码质量的重要手段。通过审查，不仅能发现bug，还能学习到更好的编码方式。</p>
+<p>写代码时，要时刻想着：</p>
+<ul>
+<li>这段代码别人能看懂吗？</li>
+<li>如果出问题，能快速定位吗？</li>
+<li>这段代码容易维护吗？</li>
+</ul>
+<hr>
+<p><strong>思考</strong>：好的代码不仅要能运行，还要易读、易维护、易扩展。这需要我们在写代码时多思考，在代码审查时多学习。</p>
+]]></content>
+      <categories>
+        <category>后端开发</category>
+      </categories>
+      <tags>
+        <tag>代码质量</tag>
+        <tag>代码审查</tag>
+        <tag>思考</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>分布式锁的实现与思考</title>
     <url>/2025/01/08/2025-01-08-distributed-lock-implementation/</url>
     <content><![CDATA[<h2 id="为什么需要分布式锁？"><a href="#为什么需要分布式锁？" class="headerlink" title="为什么需要分布式锁？"></a>为什么需要分布式锁？</h2><p>在分布式系统中，多个服务实例可能同时操作同一个资源。比如：</p>
@@ -361,187 +433,6 @@
         <tag>性能优化</tag>
         <tag>MySQL</tag>
         <tag>SQL优化</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>代码审查中的一些思考</title>
-    <url>/2024/12/25/2024-12-25-reflection-on-code-review/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>最近参与了很多代码审查，发现了一些共性问题。想记录一下自己的思考，也希望能帮助到其他开发者。</p>
-<h2 id="常见问题"><a href="#常见问题" class="headerlink" title="常见问题"></a>常见问题</h2><h3 id="1-异常处理不当"><a href="#1-异常处理不当" class="headerlink" title="1. 异常处理不当"></a>1. 异常处理不当</h3><p><strong>问题代码</strong>：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        orderService.save(order);</span><br><span class="line">        emailService.sendEmail(order.getUserEmail());</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="comment">// 吞掉异常，没有任何日志</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>问题</strong>：</p>
-<ul>
-<li>捕获了所有异常，但没有任何处理</li>
-<li>没有日志，出问题无法排查</li>
-<li>可能导致数据不一致（订单保存了，但邮件没发）</li>
-</ul>
-<p><strong>改进</strong>：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        orderService.save(order);</span><br><span class="line">        emailService.sendEmail(order.getUserEmail());</span><br><span class="line">    &#125; <span class="keyword">catch</span> (EmailException e) &#123;</span><br><span class="line">        <span class="comment">// 邮件发送失败不影响订单，记录日志即可</span></span><br><span class="line">        log.error(<span class="string">&quot;订单&#123;&#125;邮件发送失败&quot;</span>, order.getId(), e);</span><br><span class="line">        <span class="comment">// 可以考虑异步重试或加入消息队列</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="comment">// 其他异常需要处理</span></span><br><span class="line">        log.error(<span class="string">&quot;订单处理失败&quot;</span>, e);</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">OrderProcessException</span>(<span class="string">&quot;订单处理失败&quot;</span>, e);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-魔法数字和字符串"><a href="#2-魔法数字和字符串" class="headerlink" title="2. 魔法数字和字符串"></a>2. 魔法数字和字符串</h3><p><strong>问题代码</strong>：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> (status == <span class="number">1</span>) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> (status == <span class="number">2</span>) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (type.equals(<span class="string">&quot;VIP&quot;</span>)) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>改进</strong>：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 使用枚举</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">enum</span> <span class="title class_">OrderStatus</span> &#123;</span><br><span class="line">    PENDING(<span class="number">1</span>, <span class="string">&quot;待处理&quot;</span>),</span><br><span class="line">    PROCESSING(<span class="number">2</span>, <span class="string">&quot;处理中&quot;</span>),</span><br><span class="line">    COMPLETED(<span class="number">3</span>, <span class="string">&quot;已完成&quot;</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="type">int</span> code;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> String desc;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用常量</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">String</span> <span class="variable">USER_TYPE_VIP</span> <span class="operator">=</span> <span class="string">&quot;VIP&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (order.getStatus() == OrderStatus.PENDING) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="3-方法过长，职责不清"><a href="#3-方法过长，职责不清" class="headerlink" title="3. 方法过长，职责不清"></a>3. 方法过长，职责不清</h3><p><strong>问题代码</strong>：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="comment">// 验证订单</span></span><br><span class="line">    <span class="keyword">if</span> (order == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (order.getAmount() &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// ... 50行验证代码</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 保存订单</span></span><br><span class="line">    order.setCreateTime(<span class="keyword">new</span> <span class="title class_">Date</span>());</span><br><span class="line">    order.setStatus(OrderStatus.PENDING);</span><br><span class="line">    orderMapper.insert(order);</span><br><span class="line">    <span class="comment">// ... 30行保存逻辑</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 发送通知</span></span><br><span class="line">    emailService.sendEmail(...);</span><br><span class="line">    smsService.sendSms(...);</span><br><span class="line">    <span class="comment">// ... 20行通知逻辑</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 更新库存</span></span><br><span class="line">    inventoryService.update(...);</span><br><span class="line">    <span class="comment">// ... 30行库存逻辑</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>改进</strong>：拆分成多个方法，每个方法职责单一</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    validateOrder(order);</span><br><span class="line">    saveOrder(order);</span><br><span class="line">    sendNotifications(order);</span><br><span class="line">    updateInventory(order);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">validateOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="comment">// 验证逻辑</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title function_">saveOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="comment">// 保存逻辑</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ...</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-缺少空值检查"><a href="#4-缺少空值检查" class="headerlink" title="4. 缺少空值检查"></a>4. 缺少空值检查</h3><p><strong>问题代码</strong>：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> String <span class="title function_">getUserName</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userMapper.selectById(userId);</span><br><span class="line">    <span class="keyword">return</span> user.getName(); <span class="comment">// 如果user为null，会抛NPE</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>改进</strong>：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> String <span class="title function_">getUserName</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userMapper.selectById(userId);</span><br><span class="line">    <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">UserNotFoundException</span>(<span class="string">&quot;用户不存在: &quot;</span> + userId);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> user.getName();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 或者使用Optional</span></span><br><span class="line"><span class="keyword">public</span> Optional&lt;String&gt; <span class="title function_">getUserName</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> Optional.ofNullable(userMapper.selectById(userId))</span><br><span class="line">                   .map(User::getName);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-硬编码配置"><a href="#5-硬编码配置" class="headerlink" title="5. 硬编码配置"></a>5. 硬编码配置</h3><p><strong>问题代码</strong>：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">sendEmail</span><span class="params">(String to, String content)</span> &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">smtpHost</span> <span class="operator">=</span> <span class="string">&quot;smtp.163.com&quot;</span>;</span><br><span class="line">    <span class="type">int</span> <span class="variable">smtpPort</span> <span class="operator">=</span> <span class="number">25</span>;</span><br><span class="line">    <span class="type">String</span> <span class="variable">username</span> <span class="operator">=</span> <span class="string">&quot;admin@163.com&quot;</span>;</span><br><span class="line">    <span class="type">String</span> <span class="variable">password</span> <span class="operator">=</span> <span class="string">&quot;123456&quot;</span>;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>改进</strong>：使用配置文件</p>
-<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># application.yml</span></span><br><span class="line"><span class="attr">email:</span></span><br><span class="line">  <span class="attr">smtp:</span></span><br><span class="line">    <span class="attr">host:</span> <span class="string">smtp.163.com</span></span><br><span class="line">    <span class="attr">port:</span> <span class="number">25</span></span><br><span class="line">  <span class="attr">username:</span> <span class="string">$&#123;EMAIL_USERNAME&#125;</span></span><br><span class="line">  <span class="attr">password:</span> <span class="string">$&#123;EMAIL_PASSWORD&#125;</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="代码审查的原则"><a href="#代码审查的原则" class="headerlink" title="代码审查的原则"></a>代码审查的原则</h2><ol>
-<li><strong>对事不对人</strong>：指出问题，不要攻击人</li>
-<li><strong>给出建议</strong>：不仅要指出问题，还要给出改进建议</li>
-<li><strong>关注重点</strong>：优先关注逻辑错误、安全问题、性能问题</li>
-<li><strong>及时反馈</strong>：不要等到最后才审查，要持续审查</li>
-</ol>
-<h2 id="如何写好代码"><a href="#如何写好代码" class="headerlink" title="如何写好代码"></a>如何写好代码</h2><ol>
-<li><strong>单一职责</strong>：每个类、每个方法只做一件事</li>
-<li><strong>命名清晰</strong>：变量名、方法名要能表达意图</li>
-<li><strong>异常处理</strong>：不要吞掉异常，要适当处理和记录</li>
-<li><strong>代码复用</strong>：提取公共逻辑，避免重复</li>
-<li><strong>测试覆盖</strong>：重要逻辑要有单元测试</li>
-</ol>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>代码审查是提高代码质量的重要手段。通过审查，不仅能发现bug，还能学习到更好的编码方式。</p>
-<p>写代码时，要时刻想着：</p>
-<ul>
-<li>这段代码别人能看懂吗？</li>
-<li>如果出问题，能快速定位吗？</li>
-<li>这段代码容易维护吗？</li>
-</ul>
-<hr>
-<p><strong>思考</strong>：好的代码不仅要能运行，还要易读、易维护、易扩展。这需要我们在写代码时多思考，在代码审查时多学习。</p>
-]]></content>
-      <categories>
-        <category>后端开发</category>
-      </categories>
-      <tags>
-        <tag>代码质量</tag>
-        <tag>代码审查</tag>
-        <tag>思考</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Spring事务隔离级别的一次踩坑经历</title>
-    <url>/2025/03/20/2025-03-20-spring-transaction-isolation/</url>
-    <content><![CDATA[<h2 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h2><p>在开发一个订单系统时，遇到了一个奇怪的问题：</p>
-<ol>
-<li>用户下单后，库存扣减成功</li>
-<li>但订单状态没有更新为”已支付”</li>
-<li>查看日志，没有发现任何异常</li>
-</ol>
-<h2 id="代码场景"><a href="#代码场景" class="headerlink" title="代码场景"></a>代码场景</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderService</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> OrderMapper orderMapper;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> InventoryService inventoryService;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 下单</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">createOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 1. 扣减库存</span></span><br><span class="line">        inventoryService.deductStock(order.getProductId(), order.getQuantity());</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 2. 保存订单</span></span><br><span class="line">        order.setStatus(OrderStatus.PENDING);</span><br><span class="line">        orderMapper.insert(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 3. 调用支付服务（外部服务）</span></span><br><span class="line">        paymentService.pay(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 4. 更新订单状态</span></span><br><span class="line">        order.setStatus(OrderStatus.PAID);</span><br><span class="line">        orderMapper.updateById(order);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="meta">@Transactional(propagation = Propagation.REQUIRES_NEW)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">InventoryService</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">        <span class="comment">// 扣减库存逻辑</span></span><br><span class="line">        inventoryMapper.updateStock(productId, quantity);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h2><h3 id="1-事务隔离级别"><a href="#1-事务隔离级别" class="headerlink" title="1. 事务隔离级别"></a>1. 事务隔离级别</h3><p>查看数据库配置，发现使用的是<strong>READ COMMITTED</strong>隔离级别。</p>
-<h3 id="2-并发场景"><a href="#2-并发场景" class="headerlink" title="2. 并发场景"></a>2. 并发场景</h3><p>假设有两个请求同时处理：</p>
-<p><strong>时间线</strong>：</p>
-<ol>
-<li>T1: 事务A开始，查询库存为100</li>
-<li>T2: 事务B开始，查询库存为100</li>
-<li>T3: 事务A扣减10，库存变为90，但未提交</li>
-<li>T4: 事务B扣减10，库存变为90（基于100计算），但未提交</li>
-<li>T5: 事务A提交，库存为90</li>
-<li>T6: 事务B提交，库存为90（应该是80！）</li>
-</ol>
-<p><strong>问题</strong>：出现了超卖！</p>
-<h3 id="3-隔离级别对比"><a href="#3-隔离级别对比" class="headerlink" title="3. 隔离级别对比"></a>3. 隔离级别对比</h3><table>
-<thead>
-<tr>
-<th>隔离级别</th>
-<th>脏读</th>
-<th>不可重复读</th>
-<th>幻读</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>READ UNCOMMITTED</td>
-<td>可能</td>
-<td>可能</td>
-<td>可能</td>
-<td>最低级别</td>
-</tr>
-<tr>
-<td>READ COMMITTED</td>
-<td>不可能</td>
-<td>可能</td>
-<td>可能</td>
-<td>MySQL默认</td>
-</tr>
-<tr>
-<td>REPEATABLE READ</td>
-<td>不可能</td>
-<td>不可能</td>
-<td>可能</td>
-<td>可重复读</td>
-</tr>
-<tr>
-<td>SERIALIZABLE</td>
-<td>不可能</td>
-<td>不可能</td>
-<td>不可能</td>
-<td>最高级别，性能最差</td>
-</tr>
-</tbody></table>
-<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><h3 id="方案一：使用REPEATABLE-READ（不推荐）"><a href="#方案一：使用REPEATABLE-READ（不推荐）" class="headerlink" title="方案一：使用REPEATABLE READ（不推荐）"></a>方案一：使用REPEATABLE READ（不推荐）</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Transactional(isolation = Isolation.REPEATABLE_READ)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">createOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>问题</strong>：虽然能解决不可重复读，但性能较差，且可能出现死锁。</p>
-<h3 id="方案二：使用悲观锁（SELECT-FOR-UPDATE）"><a href="#方案二：使用悲观锁（SELECT-FOR-UPDATE）" class="headerlink" title="方案二：使用悲观锁（SELECT FOR UPDATE）"></a>方案二：使用悲观锁（SELECT FOR UPDATE）</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">    <span class="comment">// 使用悲观锁</span></span><br><span class="line">    <span class="type">Inventory</span> <span class="variable">inventory</span> <span class="operator">=</span> inventoryMapper.selectForUpdate(productId);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (inventory.getStock() &lt; quantity) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">InsufficientStockException</span>(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    inventory.setStock(inventory.getStock() - quantity);</span><br><span class="line">    inventoryMapper.updateById(inventory);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>SQL</strong>：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> inventory <span class="keyword">WHERE</span> product_id <span class="operator">=</span> ? <span class="keyword">FOR</span> <span class="keyword">UPDATE</span>;</span><br></pre></td></tr></table></figure>
-
-<p><strong>优点</strong>：简单直接，保证数据一致性<br><strong>缺点</strong>：性能较差，可能造成锁等待</p>
-<h3 id="方案三：使用乐观锁（推荐）"><a href="#方案三：使用乐观锁（推荐）" class="headerlink" title="方案三：使用乐观锁（推荐）"></a>方案三：使用乐观锁（推荐）</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">    <span class="type">int</span> <span class="variable">retryCount</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">    <span class="type">int</span> <span class="variable">maxRetries</span> <span class="operator">=</span> <span class="number">3</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">while</span> (retryCount &lt; maxRetries) &#123;</span><br><span class="line">        <span class="type">Inventory</span> <span class="variable">inventory</span> <span class="operator">=</span> inventoryMapper.selectById(productId);</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (inventory.getStock() &lt; quantity) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">InsufficientStockException</span>(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 使用版本号更新</span></span><br><span class="line">        <span class="type">int</span> <span class="variable">updated</span> <span class="operator">=</span> inventoryMapper.updateStockWithVersion(</span><br><span class="line">            productId, </span><br><span class="line">            quantity, </span><br><span class="line">            inventory.getVersion()</span><br><span class="line">        );</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (updated &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span>; <span class="comment">// 更新成功</span></span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        retryCount++;</span><br><span class="line">        <span class="comment">// 短暂休眠后重试</span></span><br><span class="line">        Thread.sleep(<span class="number">10</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ConcurrentUpdateException</span>(<span class="string">&quot;并发更新失败，请重试&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>SQL</strong>：</p>
-<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> inventory </span><br><span class="line"><span class="keyword">SET</span> stock <span class="operator">=</span> stock <span class="operator">-</span> ?, version <span class="operator">=</span> version <span class="operator">+</span> <span class="number">1</span></span><br><span class="line"><span class="keyword">WHERE</span> product_id <span class="operator">=</span> ? <span class="keyword">AND</span> version <span class="operator">=</span> ?</span><br></pre></td></tr></table></figure>
-
-<p><strong>优点</strong>：性能好，适合高并发场景<br><strong>缺点</strong>：需要重试机制，实现稍复杂</p>
-<h3 id="方案四：使用分布式锁"><a href="#方案四：使用分布式锁" class="headerlink" title="方案四：使用分布式锁"></a>方案四：使用分布式锁</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Autowired</span></span><br><span class="line"><span class="keyword">private</span> RedissonClient redissonClient;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">lockKey</span> <span class="operator">=</span> <span class="string">&quot;inventory:lock:&quot;</span> + productId;</span><br><span class="line">    <span class="type">RLock</span> <span class="variable">lock</span> <span class="operator">=</span> redissonClient.getLock(lockKey);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (lock.tryLock(<span class="number">5</span>, <span class="number">10</span>, TimeUnit.SECONDS)) &#123;</span><br><span class="line">            <span class="type">Inventory</span> <span class="variable">inventory</span> <span class="operator">=</span> inventoryMapper.selectById(productId);</span><br><span class="line">            </span><br><span class="line">            <span class="keyword">if</span> (inventory.getStock() &lt; quantity) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">InsufficientStockException</span>(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            inventoryMapper.updateStock(productId, quantity);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (lock.isHeldByCurrentThread()) &#123;</span><br><span class="line">            lock.unlock();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="最终方案"><a href="#最终方案" class="headerlink" title="最终方案"></a>最终方案</h2><p>结合业务场景，我们采用了<strong>乐观锁 + 分布式锁</strong>的组合方案：</p>
-<ol>
-<li><strong>分布式锁</strong>：防止并发请求同时进入</li>
-<li><strong>乐观锁</strong>：数据库层面保证数据一致性</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">lockKey</span> <span class="operator">=</span> <span class="string">&quot;inventory:lock:&quot;</span> + productId;</span><br><span class="line">    <span class="type">RLock</span> <span class="variable">lock</span> <span class="operator">=</span> redissonClient.getLock(lockKey);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (lock.tryLock(<span class="number">5</span>, <span class="number">10</span>, TimeUnit.SECONDS)) &#123;</span><br><span class="line">            <span class="type">int</span> <span class="variable">retryCount</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">while</span> (retryCount &lt; <span class="number">3</span>) &#123;</span><br><span class="line">                <span class="type">Inventory</span> <span class="variable">inventory</span> <span class="operator">=</span> inventoryMapper.selectById(productId);</span><br><span class="line">                </span><br><span class="line">                <span class="keyword">if</span> (inventory.getStock() &lt; quantity) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">InsufficientStockException</span>(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                </span><br><span class="line">                <span class="type">int</span> <span class="variable">updated</span> <span class="operator">=</span> inventoryMapper.updateStockWithVersion(</span><br><span class="line">                    productId, quantity, inventory.getVersion()</span><br><span class="line">                );</span><br><span class="line">                </span><br><span class="line">                <span class="keyword">if</span> (updated &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                </span><br><span class="line">                retryCount++;</span><br><span class="line">                Thread.sleep(<span class="number">10</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ConcurrentUpdateException</span>(<span class="string">&quot;更新失败&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (lock.isHeldByCurrentThread()) &#123;</span><br><span class="line">            lock.unlock();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="经验总结"><a href="#经验总结" class="headerlink" title="经验总结"></a>经验总结</h2><ol>
-<li><strong>理解隔离级别</strong>：不同隔离级别解决的问题不同，要根据业务选择</li>
-<li><strong>并发控制</strong>：高并发场景下，要考虑并发控制机制</li>
-<li><strong>锁的选择</strong>：<ul>
-<li>悲观锁：适合写多读少的场景</li>
-<li>乐观锁：适合读多写少的场景</li>
-<li>分布式锁：适合分布式环境</li>
-</ul>
-</li>
-<li><strong>性能平衡</strong>：在数据一致性和性能之间找到平衡</li>
-</ol>
-<hr>
-<p><strong>教训</strong>：事务隔离级别不是万能的，高并发场景下需要结合锁机制来保证数据一致性。理解各种锁的适用场景很重要。</p>
-]]></content>
-      <categories>
-        <category>Debug经验</category>
-      </categories>
-      <tags>
-        <tag>数据库</tag>
-        <tag>Spring</tag>
-        <tag>事务</tag>
       </tags>
   </entry>
   <entry>
@@ -714,6 +605,115 @@
       </tags>
   </entry>
   <entry>
+    <title>Spring事务隔离级别的一次踩坑经历</title>
+    <url>/2025/03/20/2025-03-20-spring-transaction-isolation/</url>
+    <content><![CDATA[<h2 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h2><p>在开发一个订单系统时，遇到了一个奇怪的问题：</p>
+<ol>
+<li>用户下单后，库存扣减成功</li>
+<li>但订单状态没有更新为”已支付”</li>
+<li>查看日志，没有发现任何异常</li>
+</ol>
+<h2 id="代码场景"><a href="#代码场景" class="headerlink" title="代码场景"></a>代码场景</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderService</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> OrderMapper orderMapper;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> InventoryService inventoryService;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 下单</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">createOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 1. 扣减库存</span></span><br><span class="line">        inventoryService.deductStock(order.getProductId(), order.getQuantity());</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 2. 保存订单</span></span><br><span class="line">        order.setStatus(OrderStatus.PENDING);</span><br><span class="line">        orderMapper.insert(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 3. 调用支付服务（外部服务）</span></span><br><span class="line">        paymentService.pay(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 4. 更新订单状态</span></span><br><span class="line">        order.setStatus(OrderStatus.PAID);</span><br><span class="line">        orderMapper.updateById(order);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="meta">@Transactional(propagation = Propagation.REQUIRES_NEW)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">InventoryService</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">        <span class="comment">// 扣减库存逻辑</span></span><br><span class="line">        inventoryMapper.updateStock(productId, quantity);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h2><h3 id="1-事务隔离级别"><a href="#1-事务隔离级别" class="headerlink" title="1. 事务隔离级别"></a>1. 事务隔离级别</h3><p>查看数据库配置，发现使用的是<strong>READ COMMITTED</strong>隔离级别。</p>
+<h3 id="2-并发场景"><a href="#2-并发场景" class="headerlink" title="2. 并发场景"></a>2. 并发场景</h3><p>假设有两个请求同时处理：</p>
+<p><strong>时间线</strong>：</p>
+<ol>
+<li>T1: 事务A开始，查询库存为100</li>
+<li>T2: 事务B开始，查询库存为100</li>
+<li>T3: 事务A扣减10，库存变为90，但未提交</li>
+<li>T4: 事务B扣减10，库存变为90（基于100计算），但未提交</li>
+<li>T5: 事务A提交，库存为90</li>
+<li>T6: 事务B提交，库存为90（应该是80！）</li>
+</ol>
+<p><strong>问题</strong>：出现了超卖！</p>
+<h3 id="3-隔离级别对比"><a href="#3-隔离级别对比" class="headerlink" title="3. 隔离级别对比"></a>3. 隔离级别对比</h3><table>
+<thead>
+<tr>
+<th>隔离级别</th>
+<th>脏读</th>
+<th>不可重复读</th>
+<th>幻读</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>READ UNCOMMITTED</td>
+<td>可能</td>
+<td>可能</td>
+<td>可能</td>
+<td>最低级别</td>
+</tr>
+<tr>
+<td>READ COMMITTED</td>
+<td>不可能</td>
+<td>可能</td>
+<td>可能</td>
+<td>MySQL默认</td>
+</tr>
+<tr>
+<td>REPEATABLE READ</td>
+<td>不可能</td>
+<td>不可能</td>
+<td>可能</td>
+<td>可重复读</td>
+</tr>
+<tr>
+<td>SERIALIZABLE</td>
+<td>不可能</td>
+<td>不可能</td>
+<td>不可能</td>
+<td>最高级别，性能最差</td>
+</tr>
+</tbody></table>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><h3 id="方案一：使用REPEATABLE-READ（不推荐）"><a href="#方案一：使用REPEATABLE-READ（不推荐）" class="headerlink" title="方案一：使用REPEATABLE READ（不推荐）"></a>方案一：使用REPEATABLE READ（不推荐）</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Transactional(isolation = Isolation.REPEATABLE_READ)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">createOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>问题</strong>：虽然能解决不可重复读，但性能较差，且可能出现死锁。</p>
+<h3 id="方案二：使用悲观锁（SELECT-FOR-UPDATE）"><a href="#方案二：使用悲观锁（SELECT-FOR-UPDATE）" class="headerlink" title="方案二：使用悲观锁（SELECT FOR UPDATE）"></a>方案二：使用悲观锁（SELECT FOR UPDATE）</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">    <span class="comment">// 使用悲观锁</span></span><br><span class="line">    <span class="type">Inventory</span> <span class="variable">inventory</span> <span class="operator">=</span> inventoryMapper.selectForUpdate(productId);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (inventory.getStock() &lt; quantity) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">InsufficientStockException</span>(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    inventory.setStock(inventory.getStock() - quantity);</span><br><span class="line">    inventoryMapper.updateById(inventory);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>SQL</strong>：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> inventory <span class="keyword">WHERE</span> product_id <span class="operator">=</span> ? <span class="keyword">FOR</span> <span class="keyword">UPDATE</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>优点</strong>：简单直接，保证数据一致性<br><strong>缺点</strong>：性能较差，可能造成锁等待</p>
+<h3 id="方案三：使用乐观锁（推荐）"><a href="#方案三：使用乐观锁（推荐）" class="headerlink" title="方案三：使用乐观锁（推荐）"></a>方案三：使用乐观锁（推荐）</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">    <span class="type">int</span> <span class="variable">retryCount</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">    <span class="type">int</span> <span class="variable">maxRetries</span> <span class="operator">=</span> <span class="number">3</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">while</span> (retryCount &lt; maxRetries) &#123;</span><br><span class="line">        <span class="type">Inventory</span> <span class="variable">inventory</span> <span class="operator">=</span> inventoryMapper.selectById(productId);</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (inventory.getStock() &lt; quantity) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">InsufficientStockException</span>(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 使用版本号更新</span></span><br><span class="line">        <span class="type">int</span> <span class="variable">updated</span> <span class="operator">=</span> inventoryMapper.updateStockWithVersion(</span><br><span class="line">            productId, </span><br><span class="line">            quantity, </span><br><span class="line">            inventory.getVersion()</span><br><span class="line">        );</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (updated &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span>; <span class="comment">// 更新成功</span></span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        retryCount++;</span><br><span class="line">        <span class="comment">// 短暂休眠后重试</span></span><br><span class="line">        Thread.sleep(<span class="number">10</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ConcurrentUpdateException</span>(<span class="string">&quot;并发更新失败，请重试&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>SQL</strong>：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> inventory </span><br><span class="line"><span class="keyword">SET</span> stock <span class="operator">=</span> stock <span class="operator">-</span> ?, version <span class="operator">=</span> version <span class="operator">+</span> <span class="number">1</span></span><br><span class="line"><span class="keyword">WHERE</span> product_id <span class="operator">=</span> ? <span class="keyword">AND</span> version <span class="operator">=</span> ?</span><br></pre></td></tr></table></figure>
+
+<p><strong>优点</strong>：性能好，适合高并发场景<br><strong>缺点</strong>：需要重试机制，实现稍复杂</p>
+<h3 id="方案四：使用分布式锁"><a href="#方案四：使用分布式锁" class="headerlink" title="方案四：使用分布式锁"></a>方案四：使用分布式锁</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Autowired</span></span><br><span class="line"><span class="keyword">private</span> RedissonClient redissonClient;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">lockKey</span> <span class="operator">=</span> <span class="string">&quot;inventory:lock:&quot;</span> + productId;</span><br><span class="line">    <span class="type">RLock</span> <span class="variable">lock</span> <span class="operator">=</span> redissonClient.getLock(lockKey);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (lock.tryLock(<span class="number">5</span>, <span class="number">10</span>, TimeUnit.SECONDS)) &#123;</span><br><span class="line">            <span class="type">Inventory</span> <span class="variable">inventory</span> <span class="operator">=</span> inventoryMapper.selectById(productId);</span><br><span class="line">            </span><br><span class="line">            <span class="keyword">if</span> (inventory.getStock() &lt; quantity) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">InsufficientStockException</span>(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            </span><br><span class="line">            inventoryMapper.updateStock(productId, quantity);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (lock.isHeldByCurrentThread()) &#123;</span><br><span class="line">            lock.unlock();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="最终方案"><a href="#最终方案" class="headerlink" title="最终方案"></a>最终方案</h2><p>结合业务场景，我们采用了<strong>乐观锁 + 分布式锁</strong>的组合方案：</p>
+<ol>
+<li><strong>分布式锁</strong>：防止并发请求同时进入</li>
+<li><strong>乐观锁</strong>：数据库层面保证数据一致性</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Long productId, Integer quantity)</span> &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">lockKey</span> <span class="operator">=</span> <span class="string">&quot;inventory:lock:&quot;</span> + productId;</span><br><span class="line">    <span class="type">RLock</span> <span class="variable">lock</span> <span class="operator">=</span> redissonClient.getLock(lockKey);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (lock.tryLock(<span class="number">5</span>, <span class="number">10</span>, TimeUnit.SECONDS)) &#123;</span><br><span class="line">            <span class="type">int</span> <span class="variable">retryCount</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">while</span> (retryCount &lt; <span class="number">3</span>) &#123;</span><br><span class="line">                <span class="type">Inventory</span> <span class="variable">inventory</span> <span class="operator">=</span> inventoryMapper.selectById(productId);</span><br><span class="line">                </span><br><span class="line">                <span class="keyword">if</span> (inventory.getStock() &lt; quantity) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">InsufficientStockException</span>(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                </span><br><span class="line">                <span class="type">int</span> <span class="variable">updated</span> <span class="operator">=</span> inventoryMapper.updateStockWithVersion(</span><br><span class="line">                    productId, quantity, inventory.getVersion()</span><br><span class="line">                );</span><br><span class="line">                </span><br><span class="line">                <span class="keyword">if</span> (updated &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                </span><br><span class="line">                retryCount++;</span><br><span class="line">                Thread.sleep(<span class="number">10</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ConcurrentUpdateException</span>(<span class="string">&quot;更新失败&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (lock.isHeldByCurrentThread()) &#123;</span><br><span class="line">            lock.unlock();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="经验总结"><a href="#经验总结" class="headerlink" title="经验总结"></a>经验总结</h2><ol>
+<li><strong>理解隔离级别</strong>：不同隔离级别解决的问题不同，要根据业务选择</li>
+<li><strong>并发控制</strong>：高并发场景下，要考虑并发控制机制</li>
+<li><strong>锁的选择</strong>：<ul>
+<li>悲观锁：适合写多读少的场景</li>
+<li>乐观锁：适合读多写少的场景</li>
+<li>分布式锁：适合分布式环境</li>
+</ul>
+</li>
+<li><strong>性能平衡</strong>：在数据一致性和性能之间找到平衡</li>
+</ol>
+<hr>
+<p><strong>教训</strong>：事务隔离级别不是万能的，高并发场景下需要结合锁机制来保证数据一致性。理解各种锁的适用场景很重要。</p>
+]]></content>
+      <categories>
+        <category>Debug经验</category>
+      </categories>
+      <tags>
+        <tag>数据库</tag>
+        <tag>Spring</tag>
+        <tag>事务</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>消息队列在项目中的应用实践</title>
     <url>/2025/05/22/2025-05-22-message-queue-usage/</url>
     <content><![CDATA[<h2 id="为什么使用消息队列？"><a href="#为什么使用消息队列？" class="headerlink" title="为什么使用消息队列？"></a>为什么使用消息队列？</h2><p>在项目中引入消息队列主要解决以下问题：</p>
@@ -790,6 +790,146 @@
         <tag>消息队列</tag>
         <tag>RabbitMQ</tag>
         <tag>异步处理</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>JVM GC调优实战记录</title>
+    <url>/2025/08/05/2025-08-05-jvm-gc-optimization/</url>
+    <content><![CDATA[<h2 id="问题背景"><a href="#问题背景" class="headerlink" title="问题背景"></a>问题背景</h2><p>生产环境的一个Spring Boot应用，运行一段时间后响应变慢，偶尔出现Full GC，影响用户体验。</p>
+<h2 id="环境信息"><a href="#环境信息" class="headerlink" title="环境信息"></a>环境信息</h2><ul>
+<li>JDK版本：OpenJDK 11</li>
+<li>堆内存：2GB</li>
+<li>GC：G1GC</li>
+<li>应用类型：Web应用，QPS约500</li>
+</ul>
+<h2 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h2><h3 id="1-查看GC日志"><a href="#1-查看GC日志" class="headerlink" title="1. 查看GC日志"></a>1. 查看GC日志</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 启动参数</span></span><br><span class="line">-XX:+UseG1GC</span><br><span class="line">-XX:+PrintGCDetails</span><br><span class="line">-XX:+PrintGCDateStamps</span><br><span class="line">-Xloggc:gc.log</span><br></pre></td></tr></table></figure>
+
+<p>分析GC日志：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">2025-08-05T15:30:00.123+0800: [GC pause (G1 Evacuation Pause) (young)</span><br><span class="line">  [Eden: 512M-&gt;0B(512M) Survivors: 0B-&gt;64M Heap: 1024M-&gt;800M(2048M)]</span><br><span class="line">  0.1234567 secs]</span><br></pre></td></tr></table></figure>
+
+<p>发现：</p>
+<ul>
+<li>Young GC频繁，平均每10秒一次</li>
+<li>偶尔出现Full GC，耗时1-2秒</li>
+<li>老年代占用率持续增长</li>
+</ul>
+<h3 id="2-使用jstat监控"><a href="#2-使用jstat监控" class="headerlink" title="2. 使用jstat监控"></a>2. 使用jstat监控</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">jstat -gcutil &lt;pid&gt; 1000</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">S0     S1     E      O      M     CCS    YGC     YGCT    FGC    FGCT     GCT</span><br><span class="line">0.00  50.00  25.00  75.00  95.00  90.00   120    5.234    3    2.456   7.690</span><br></pre></td></tr></table></figure>
+
+<p>问题：</p>
+<ul>
+<li>老年代占用率75%，接近触发Full GC的阈值</li>
+<li>元空间占用率95%，可能触发Full GC</li>
+</ul>
+<h3 id="3-生成堆转储分析"><a href="#3-生成堆转储分析" class="headerlink" title="3. 生成堆转储分析"></a>3. 生成堆转储分析</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">jmap -dump:format=b,file=heap.hprof &lt;pid&gt;</span><br></pre></td></tr></table></figure>
+
+<p>使用MAT分析，发现：</p>
+<ul>
+<li>大量缓存对象占用内存</li>
+<li>存在内存泄漏（某些对象无法被回收）</li>
+</ul>
+<h2 id="优化方案"><a href="#优化方案" class="headerlink" title="优化方案"></a>优化方案</h2><h3 id="方案一：调整堆内存大小"><a href="#方案一：调整堆内存大小" class="headerlink" title="方案一：调整堆内存大小"></a>方案一：调整堆内存大小</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 优化前</span></span><br><span class="line">-Xms2g -Xmx2g</span><br><span class="line"></span><br><span class="line"><span class="comment"># 优化后</span></span><br><span class="line">-Xms4g -Xmx4g</span><br></pre></td></tr></table></figure>
+
+<p><strong>效果</strong>：减少GC频率，但治标不治本。</p>
+<h3 id="方案二：优化G1GC参数"><a href="#方案二：优化G1GC参数" class="headerlink" title="方案二：优化G1GC参数"></a>方案二：优化G1GC参数</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 优化后的启动参数</span></span><br><span class="line">-XX:+UseG1GC</span><br><span class="line">-XX:MaxGCPauseMillis=200  <span class="comment"># 最大暂停时间200ms</span></span><br><span class="line">-XX:G1HeapRegionSize=16m  <span class="comment"># Region大小</span></span><br><span class="line">-XX:InitiatingHeapOccupancyPercent=45  <span class="comment"># 触发并发标记的堆占用率</span></span><br><span class="line">-XX:ConcGCThreads=4  <span class="comment"># 并发GC线程数</span></span><br><span class="line">-XX:ParallelGCThreads=8  <span class="comment"># 并行GC线程数</span></span><br><span class="line">-XX:G1ReservePercent=10  <span class="comment"># 保留内存百分比</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="方案三：优化代码（根本解决）"><a href="#方案三：优化代码（根本解决）" class="headerlink" title="方案三：优化代码（根本解决）"></a>方案三：优化代码（根本解决）</h3><h4 id="1-减少对象创建"><a href="#1-减少对象创建" class="headerlink" title="1. 减少对象创建"></a>1. 减少对象创建</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 不好：每次循环都创建新对象</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">1000</span>; i++) &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">str</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">String</span>(<span class="string">&quot;test&quot;</span> + i);</span><br><span class="line">    process(str);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 好：复用对象或使用StringBuilder</span></span><br><span class="line"><span class="type">StringBuilder</span> <span class="variable">sb</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">StringBuilder</span>();</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">1000</span>; i++) &#123;</span><br><span class="line">    sb.setLength(<span class="number">0</span>);</span><br><span class="line">    sb.append(<span class="string">&quot;test&quot;</span>).append(i);</span><br><span class="line">    process(sb.toString());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-优化缓存"><a href="#2-优化缓存" class="headerlink" title="2. 优化缓存"></a>2. 优化缓存</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 问题：缓存无限增长</span></span><br><span class="line"><span class="keyword">private</span> Map&lt;String, Object&gt; cache = <span class="keyword">new</span> <span class="title class_">ConcurrentHashMap</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 优化：使用带过期时间的缓存</span></span><br><span class="line"><span class="meta">@Autowired</span></span><br><span class="line"><span class="keyword">private</span> RedisTemplate&lt;String, Object&gt; redisTemplate;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> Object <span class="title function_">get</span><span class="params">(String key)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> redisTemplate.opsForValue().get(key);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 或者使用Caffeine（本地缓存）</span></span><br><span class="line"><span class="keyword">private</span> Cache&lt;String, Object&gt; cache = Caffeine.newBuilder()</span><br><span class="line">    .maximumSize(<span class="number">10000</span>)</span><br><span class="line">    .expireAfterWrite(<span class="number">1</span>, TimeUnit.HOURS)</span><br><span class="line">    .build();</span><br></pre></td></tr></table></figure>
+
+<h4 id="3-及时释放资源"><a href="#3-及时释放资源" class="headerlink" title="3. 及时释放资源"></a>3. 及时释放资源</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 使用try-with-resources</span></span><br><span class="line"><span class="keyword">try</span> (<span class="type">Connection</span> <span class="variable">conn</span> <span class="operator">=</span> dataSource.getConnection();</span><br><span class="line">     <span class="type">PreparedStatement</span> <span class="variable">stmt</span> <span class="operator">=</span> conn.prepareStatement(sql)) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 及时清理ThreadLocal</span></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// 使用ThreadLocal</span></span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    threadLocal.remove();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="方案四：选择合适的GC"><a href="#方案四：选择合适的GC" class="headerlink" title="方案四：选择合适的GC"></a>方案四：选择合适的GC</h3><h4 id="G1GC（推荐，JDK-11-）"><a href="#G1GC（推荐，JDK-11-）" class="headerlink" title="G1GC（推荐，JDK 11+）"></a>G1GC（推荐，JDK 11+）</h4><p>适合：</p>
+<ul>
+<li>堆内存较大（&gt;4GB）</li>
+<li>低延迟要求</li>
+<li>吞吐量要求不是特别高</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-XX:+UseG1GC</span><br><span class="line">-XX:MaxGCPauseMillis=200</span><br></pre></td></tr></table></figure>
+
+<h4 id="ZGC（JDK-11-，实验性）"><a href="#ZGC（JDK-11-，实验性）" class="headerlink" title="ZGC（JDK 11+，实验性）"></a>ZGC（JDK 11+，实验性）</h4><p>适合：</p>
+<ul>
+<li>超大堆内存（&gt;32GB）</li>
+<li>极低延迟要求（&lt;10ms）</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-XX:+UnlockExperimentalVMOptions</span><br><span class="line">-XX:+UseZGC</span><br></pre></td></tr></table></figure>
+
+<h4 id="ParallelGC"><a href="#ParallelGC" class="headerlink" title="ParallelGC"></a>ParallelGC</h4><p>适合：</p>
+<ul>
+<li>吞吐量优先</li>
+<li>可以容忍较长的GC暂停</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-XX:+UseParallelGC</span><br><span class="line">-XX:ParallelGCThreads=8</span><br></pre></td></tr></table></figure>
+
+<h2 id="最终配置"><a href="#最终配置" class="headerlink" title="最终配置"></a>最终配置</h2><p>结合实际情况，最终使用的JVM参数：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 堆内存</span></span><br><span class="line">-Xms4g</span><br><span class="line">-Xmx4g</span><br><span class="line"></span><br><span class="line"><span class="comment"># G1GC</span></span><br><span class="line">-XX:+UseG1GC</span><br><span class="line">-XX:MaxGCPauseMillis=200</span><br><span class="line">-XX:G1HeapRegionSize=16m</span><br><span class="line">-XX:InitiatingHeapOccupancyPercent=45</span><br><span class="line"></span><br><span class="line"><span class="comment"># GC日志</span></span><br><span class="line">-XX:+PrintGCDetails</span><br><span class="line">-XX:+PrintGCDateStamps</span><br><span class="line">-Xloggc:/var/log/gc.log</span><br><span class="line">-XX:+UseGCLogFileRotation</span><br><span class="line">-XX:NumberOfGCLogFiles=10</span><br><span class="line">-XX:GCLogFileSize=10M</span><br><span class="line"></span><br><span class="line"><span class="comment"># 堆转储</span></span><br><span class="line">-XX:+HeapDumpOnOutOfMemoryError</span><br><span class="line">-XX:HeapDumpPath=/var/log/heap.hprof</span><br><span class="line"></span><br><span class="line"><span class="comment"># 其他</span></span><br><span class="line">-XX:+DisableExplicitGC  <span class="comment"># 禁用System.gc()</span></span><br><span class="line">-XX:+ExitOnOutOfMemoryError  <span class="comment"># OOM时退出</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="优化效果"><a href="#优化效果" class="headerlink" title="优化效果"></a>优化效果</h2><p>优化前后对比：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>优化前</th>
+<th>优化后</th>
+<th>改善</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Young GC频率</td>
+<td>每10秒</td>
+<td>每30秒</td>
+<td>减少67%</td>
+</tr>
+<tr>
+<td>Young GC耗时</td>
+<td>100-200ms</td>
+<td>50-100ms</td>
+<td>减少50%</td>
+</tr>
+<tr>
+<td>Full GC频率</td>
+<td>每天3-5次</td>
+<td>几乎为0</td>
+<td>显著改善</td>
+</tr>
+<tr>
+<td>平均响应时间</td>
+<td>200ms</td>
+<td>150ms</td>
+<td>改善25%</td>
+</tr>
+<tr>
+<td>99分位响应时间</td>
+<td>500ms</td>
+<td>300ms</td>
+<td>改善40%</td>
+</tr>
+</tbody></table>
+<h2 id="监控建议"><a href="#监控建议" class="headerlink" title="监控建议"></a>监控建议</h2><ol>
+<li><strong>GC日志分析</strong>：定期分析GC日志，关注GC频率和耗时</li>
+<li><strong>堆内存监控</strong>：监控堆内存使用情况</li>
+<li><strong>告警设置</strong>：Full GC频率、GC耗时超过阈值时告警</li>
+<li><strong>性能测试</strong>：定期进行压力测试，验证GC表现</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>JVM GC调优是一个持续的过程：</p>
+<ol>
+<li><strong>监控先行</strong>：先监控，再优化</li>
+<li><strong>代码优化</strong>：优先优化代码，减少对象创建</li>
+<li><strong>参数调优</strong>：根据实际情况调整GC参数</li>
+<li><strong>持续改进</strong>：定期分析，持续优化</li>
+</ol>
+<hr>
+<p><strong>经验</strong>：GC调优没有银弹，需要根据实际业务场景和硬件环境进行调整。最重要的是先优化代码，再调整参数。</p>
+]]></content>
+      <categories>
+        <category>Debug经验</category>
+      </categories>
+      <tags>
+        <tag>性能优化</tag>
+        <tag>JVM</tag>
+        <tag>GC</tag>
       </tags>
   </entry>
   <entry>
@@ -937,143 +1077,66 @@
       </tags>
   </entry>
   <entry>
-    <title>JVM GC调优实战记录</title>
-    <url>/2025/08/05/2025-08-05-jvm-gc-optimization/</url>
-    <content><![CDATA[<h2 id="问题背景"><a href="#问题背景" class="headerlink" title="问题背景"></a>问题背景</h2><p>生产环境的一个Spring Boot应用，运行一段时间后响应变慢，偶尔出现Full GC，影响用户体验。</p>
-<h2 id="环境信息"><a href="#环境信息" class="headerlink" title="环境信息"></a>环境信息</h2><ul>
-<li>JDK版本：OpenJDK 11</li>
-<li>堆内存：2GB</li>
-<li>GC：G1GC</li>
-<li>应用类型：Web应用，QPS约500</li>
-</ul>
-<h2 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h2><h3 id="1-查看GC日志"><a href="#1-查看GC日志" class="headerlink" title="1. 查看GC日志"></a>1. 查看GC日志</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 启动参数</span></span><br><span class="line">-XX:+UseG1GC</span><br><span class="line">-XX:+PrintGCDetails</span><br><span class="line">-XX:+PrintGCDateStamps</span><br><span class="line">-Xloggc:gc.log</span><br></pre></td></tr></table></figure>
+    <title>设计模式在实际项目中的应用</title>
+    <url>/2025/09/12/2025-09-12-design-patterns-in-practice/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>设计模式不是银弹，但合理使用能让代码更清晰、易维护。记录一些在实际项目中应用设计模式的案例。</p>
+<h2 id="1-策略模式：支付方式选择"><a href="#1-策略模式：支付方式选择" class="headerlink" title="1. 策略模式：支付方式选择"></a>1. 策略模式：支付方式选择</h2><h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a>场景</h3><p>系统支持多种支付方式：支付宝、微信、银行卡。不同支付方式的处理逻辑不同。</p>
+<h3 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 支付策略接口</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">PaymentStrategy</span> &#123;</span><br><span class="line">    PaymentResult <span class="title function_">pay</span><span class="params">(PaymentRequest request)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 支付宝支付</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">AlipayStrategy</span> <span class="keyword">implements</span> <span class="title class_">PaymentStrategy</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> PaymentResult <span class="title function_">pay</span><span class="params">(PaymentRequest request)</span> &#123;</span><br><span class="line">        <span class="comment">// 支付宝支付逻辑</span></span><br><span class="line">        <span class="keyword">return</span> alipayService.pay(request);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 微信支付</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">WechatPayStrategy</span> <span class="keyword">implements</span> <span class="title class_">PaymentStrategy</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> PaymentResult <span class="title function_">pay</span><span class="params">(PaymentRequest request)</span> &#123;</span><br><span class="line">        <span class="comment">// 微信支付逻辑</span></span><br><span class="line">        <span class="keyword">return</span> wechatPayService.pay(request);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 支付策略工厂</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PaymentStrategyFactory</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;PaymentType, PaymentStrategy&gt; strategies;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">PaymentStrategyFactory</span><span class="params">(List&lt;PaymentStrategy&gt; strategyList)</span> &#123;</span><br><span class="line">        strategies = strategyList.stream()</span><br><span class="line">            .collect(Collectors.toMap(</span><br><span class="line">                <span class="built_in">this</span>::getPaymentType,</span><br><span class="line">                Function.identity()</span><br><span class="line">            ));</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> PaymentStrategy <span class="title function_">getStrategy</span><span class="params">(PaymentType type)</span> &#123;</span><br><span class="line">        <span class="type">PaymentStrategy</span> <span class="variable">strategy</span> <span class="operator">=</span> strategies.get(type);</span><br><span class="line">        <span class="keyword">if</span> (strategy == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">UnsupportedPaymentTypeException</span>(<span class="string">&quot;不支持的支付方式: &quot;</span> + type);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> strategy;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> PaymentType <span class="title function_">getPaymentType</span><span class="params">(PaymentStrategy strategy)</span> &#123;</span><br><span class="line">        <span class="comment">// 根据策略类型返回支付类型</span></span><br><span class="line">        <span class="keyword">if</span> (strategy <span class="keyword">instanceof</span> AlipayStrategy) &#123;</span><br><span class="line">            <span class="keyword">return</span> PaymentType.ALIPAY;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (strategy <span class="keyword">instanceof</span> WechatPayStrategy) &#123;</span><br><span class="line">            <span class="keyword">return</span> PaymentType.WECHAT;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用</span></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PaymentService</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> PaymentStrategyFactory strategyFactory;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> PaymentResult <span class="title function_">pay</span><span class="params">(PaymentRequest request)</span> &#123;</span><br><span class="line">        <span class="type">PaymentStrategy</span> <span class="variable">strategy</span> <span class="operator">=</span> strategyFactory.getStrategy(request.getType());</span><br><span class="line">        <span class="keyword">return</span> strategy.pay(request);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>分析GC日志：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">2025-08-05T15:30:00.123+0800: [GC pause (G1 Evacuation Pause) (young)</span><br><span class="line">  [Eden: 512M-&gt;0B(512M) Survivors: 0B-&gt;64M Heap: 1024M-&gt;800M(2048M)]</span><br><span class="line">  0.1234567 secs]</span><br></pre></td></tr></table></figure>
-
-<p>发现：</p>
+<p><strong>优点</strong>：</p>
 <ul>
-<li>Young GC频繁，平均每10秒一次</li>
-<li>偶尔出现Full GC，耗时1-2秒</li>
-<li>老年代占用率持续增长</li>
+<li>易于扩展新的支付方式</li>
+<li>各支付方式逻辑解耦</li>
+<li>符合开闭原则</li>
 </ul>
-<h3 id="2-使用jstat监控"><a href="#2-使用jstat监控" class="headerlink" title="2. 使用jstat监控"></a>2. 使用jstat监控</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">jstat -gcutil &lt;pid&gt; 1000</span><br></pre></td></tr></table></figure>
+<h2 id="2-模板方法模式：订单处理流程"><a href="#2-模板方法模式：订单处理流程" class="headerlink" title="2. 模板方法模式：订单处理流程"></a>2. 模板方法模式：订单处理流程</h2><h3 id="场景-1"><a href="#场景-1" class="headerlink" title="场景"></a>场景</h3><p>不同类型的订单（普通订单、团购订单、秒杀订单）处理流程相似，但某些步骤不同。</p>
+<h3 id="实现-1"><a href="#实现-1" class="headerlink" title="实现"></a>实现</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 抽象订单处理器</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">class</span> <span class="title class_">AbstractOrderProcessor</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 处理订单（模板方法）</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 1. 验证订单</span></span><br><span class="line">        validateOrder(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 2. 扣减库存（子类实现）</span></span><br><span class="line">        deductStock(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 3. 计算价格（子类实现）</span></span><br><span class="line">        calculatePrice(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 4. 保存订单</span></span><br><span class="line">        saveOrder(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 5. 发送通知（子类实现）</span></span><br><span class="line">        sendNotification(order);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">validateOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 通用验证逻辑</span></span><br><span class="line">        <span class="keyword">if</span> (order == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;订单不能为空&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Order order)</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title function_">calculatePrice</span><span class="params">(Order order)</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">saveOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 通用保存逻辑</span></span><br><span class="line">        orderMapper.insert(order);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title function_">sendNotification</span><span class="params">(Order order)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 普通订单处理器</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">NormalOrderProcessor</span> <span class="keyword">extends</span> <span class="title class_">AbstractOrderProcessor</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 普通订单库存扣减逻辑</span></span><br><span class="line">        inventoryService.deductStock(order.getProductId(), order.getQuantity());</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">calculatePrice</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 普通订单价格计算</span></span><br><span class="line">        order.setTotalPrice(order.getProductPrice() * order.getQuantity());</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">sendNotification</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 发送普通订单通知</span></span><br><span class="line">        emailService.sendOrderConfirmEmail(order);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 秒杀订单处理器</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SeckillOrderProcessor</span> <span class="keyword">extends</span> <span class="title class_">AbstractOrderProcessor</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 秒杀订单库存扣减（需要加锁）</span></span><br><span class="line">        seckillService.deductStockWithLock(order.getProductId(), order.getQuantity());</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">calculatePrice</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 秒杀订单价格计算（使用秒杀价）</span></span><br><span class="line">        order.setTotalPrice(order.getSeckillPrice() * order.getQuantity());</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">sendNotification</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 发送秒杀订单通知</span></span><br><span class="line">        smsService.sendSeckillSuccessSms(order);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>输出：</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">S0     S1     E      O      M     CCS    YGC     YGCT    FGC    FGCT     GCT</span><br><span class="line">0.00  50.00  25.00  75.00  95.00  90.00   120    5.234    3    2.456   7.690</span><br></pre></td></tr></table></figure>
-
-<p>问题：</p>
+<p><strong>优点</strong>：</p>
 <ul>
-<li>老年代占用率75%，接近触发Full GC的阈值</li>
-<li>元空间占用率95%，可能触发Full GC</li>
+<li>复用公共逻辑</li>
+<li>子类只需实现差异部分</li>
+<li>流程统一，易于维护</li>
 </ul>
-<h3 id="3-生成堆转储分析"><a href="#3-生成堆转储分析" class="headerlink" title="3. 生成堆转储分析"></a>3. 生成堆转储分析</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">jmap -dump:format=b,file=heap.hprof &lt;pid&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="3-观察者模式：订单状态变更通知"><a href="#3-观察者模式：订单状态变更通知" class="headerlink" title="3. 观察者模式：订单状态变更通知"></a>3. 观察者模式：订单状态变更通知</h2><h3 id="场景-2"><a href="#场景-2" class="headerlink" title="场景"></a>场景</h3><p>订单状态变更时，需要通知多个系统：短信系统、邮件系统、物流系统等。</p>
+<h3 id="实现-2"><a href="#实现-2" class="headerlink" title="实现"></a>实现</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 事件</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderStatusChangedEvent</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> Long orderId;</span><br><span class="line">    <span class="keyword">private</span> OrderStatus oldStatus;</span><br><span class="line">    <span class="keyword">private</span> OrderStatus newStatus;</span><br><span class="line">    <span class="comment">// getter/setter</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 观察者接口</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">OrderStatusListener</span> &#123;</span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">onStatusChanged</span><span class="params">(OrderStatusChangedEvent event)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 短信通知观察者</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SmsNotificationListener</span> <span class="keyword">implements</span> <span class="title class_">OrderStatusListener</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">onStatusChanged</span><span class="params">(OrderStatusChangedEvent event)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (event.getNewStatus() == OrderStatus.PAID) &#123;</span><br><span class="line">            smsService.sendPaymentSuccessSms(event.getOrderId());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 邮件通知观察者</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">EmailNotificationListener</span> <span class="keyword">implements</span> <span class="title class_">OrderStatusListener</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">onStatusChanged</span><span class="params">(OrderStatusChangedEvent event)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (event.getNewStatus() == OrderStatus.SHIPPED) &#123;</span><br><span class="line">            emailService.sendShippingEmail(event.getOrderId());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 事件发布者</span></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderService</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> ApplicationEventPublisher eventPublisher;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">updateOrderStatus</span><span class="params">(Long orderId, OrderStatus newStatus)</span> &#123;</span><br><span class="line">        <span class="type">Order</span> <span class="variable">order</span> <span class="operator">=</span> orderMapper.selectById(orderId);</span><br><span class="line">        <span class="type">OrderStatus</span> <span class="variable">oldStatus</span> <span class="operator">=</span> order.getStatus();</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 更新状态</span></span><br><span class="line">        order.setStatus(newStatus);</span><br><span class="line">        orderMapper.updateById(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 发布事件</span></span><br><span class="line">        <span class="type">OrderStatusChangedEvent</span> <span class="variable">event</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">OrderStatusChangedEvent</span>();</span><br><span class="line">        event.setOrderId(orderId);</span><br><span class="line">        event.setOldStatus(oldStatus);</span><br><span class="line">        event.setNewStatus(newStatus);</span><br><span class="line">        eventPublisher.publishEvent(event);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>使用MAT分析，发现：</p>
+<p><strong>优点</strong>：</p>
 <ul>
-<li>大量缓存对象占用内存</li>
-<li>存在内存泄漏（某些对象无法被回收）</li>
+<li>解耦：订单服务不需要知道有哪些监听者</li>
+<li>易扩展：新增监听者只需实现接口</li>
+<li>符合开闭原则</li>
 </ul>
-<h2 id="优化方案"><a href="#优化方案" class="headerlink" title="优化方案"></a>优化方案</h2><h3 id="方案一：调整堆内存大小"><a href="#方案一：调整堆内存大小" class="headerlink" title="方案一：调整堆内存大小"></a>方案一：调整堆内存大小</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 优化前</span></span><br><span class="line">-Xms2g -Xmx2g</span><br><span class="line"></span><br><span class="line"><span class="comment"># 优化后</span></span><br><span class="line">-Xms4g -Xmx4g</span><br></pre></td></tr></table></figure>
+<h2 id="4-建造者模式：复杂对象构建"><a href="#4-建造者模式：复杂对象构建" class="headerlink" title="4. 建造者模式：复杂对象构建"></a>4. 建造者模式：复杂对象构建</h2><h3 id="场景-3"><a href="#场景-3" class="headerlink" title="场景"></a>场景</h3><p>构建复杂的查询条件对象，有很多可选参数。</p>
+<h3 id="实现-3"><a href="#实现-3" class="headerlink" title="实现"></a>实现</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 查询条件</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderQuery</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> Long userId;</span><br><span class="line">    <span class="keyword">private</span> OrderStatus status;</span><br><span class="line">    <span class="keyword">private</span> LocalDateTime startTime;</span><br><span class="line">    <span class="keyword">private</span> LocalDateTime endTime;</span><br><span class="line">    <span class="keyword">private</span> Integer minAmount;</span><br><span class="line">    <span class="keyword">private</span> Integer maxAmount;</span><br><span class="line">    <span class="keyword">private</span> String keyword;</span><br><span class="line">    <span class="comment">// getter/setter</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 建造者</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">Builder</span> &#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="type">OrderQuery</span> <span class="variable">query</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">OrderQuery</span>();</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">userId</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">            query.setUserId(userId);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">status</span><span class="params">(OrderStatus status)</span> &#123;</span><br><span class="line">            query.setStatus(status);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">timeRange</span><span class="params">(LocalDateTime start, LocalDateTime end)</span> &#123;</span><br><span class="line">            query.setStartTime(start);</span><br><span class="line">            query.setEndTime(end);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">amountRange</span><span class="params">(Integer min, Integer max)</span> &#123;</span><br><span class="line">            query.setMinAmount(min);</span><br><span class="line">            query.setMaxAmount(max);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">keyword</span><span class="params">(String keyword)</span> &#123;</span><br><span class="line">            query.setKeyword(keyword);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> OrderQuery <span class="title function_">build</span><span class="params">()</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> query;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用</span></span><br><span class="line"><span class="type">OrderQuery</span> <span class="variable">query</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">OrderQuery</span>.Builder()</span><br><span class="line">    .userId(<span class="number">123L</span>)</span><br><span class="line">    .status(OrderStatus.PAID)</span><br><span class="line">    .timeRange(startTime, endTime)</span><br><span class="line">    .amountRange(<span class="number">100</span>, <span class="number">1000</span>)</span><br><span class="line">    .build();</span><br></pre></td></tr></table></figure>
 
-<p><strong>效果</strong>：减少GC频率，但治标不治本。</p>
-<h3 id="方案二：优化G1GC参数"><a href="#方案二：优化G1GC参数" class="headerlink" title="方案二：优化G1GC参数"></a>方案二：优化G1GC参数</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 优化后的启动参数</span></span><br><span class="line">-XX:+UseG1GC</span><br><span class="line">-XX:MaxGCPauseMillis=200  <span class="comment"># 最大暂停时间200ms</span></span><br><span class="line">-XX:G1HeapRegionSize=16m  <span class="comment"># Region大小</span></span><br><span class="line">-XX:InitiatingHeapOccupancyPercent=45  <span class="comment"># 触发并发标记的堆占用率</span></span><br><span class="line">-XX:ConcGCThreads=4  <span class="comment"># 并发GC线程数</span></span><br><span class="line">-XX:ParallelGCThreads=8  <span class="comment"># 并行GC线程数</span></span><br><span class="line">-XX:G1ReservePercent=10  <span class="comment"># 保留内存百分比</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="方案三：优化代码（根本解决）"><a href="#方案三：优化代码（根本解决）" class="headerlink" title="方案三：优化代码（根本解决）"></a>方案三：优化代码（根本解决）</h3><h4 id="1-减少对象创建"><a href="#1-减少对象创建" class="headerlink" title="1. 减少对象创建"></a>1. 减少对象创建</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 不好：每次循环都创建新对象</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">1000</span>; i++) &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">str</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">String</span>(<span class="string">&quot;test&quot;</span> + i);</span><br><span class="line">    process(str);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 好：复用对象或使用StringBuilder</span></span><br><span class="line"><span class="type">StringBuilder</span> <span class="variable">sb</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">StringBuilder</span>();</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">1000</span>; i++) &#123;</span><br><span class="line">    sb.setLength(<span class="number">0</span>);</span><br><span class="line">    sb.append(<span class="string">&quot;test&quot;</span>).append(i);</span><br><span class="line">    process(sb.toString());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h4 id="2-优化缓存"><a href="#2-优化缓存" class="headerlink" title="2. 优化缓存"></a>2. 优化缓存</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 问题：缓存无限增长</span></span><br><span class="line"><span class="keyword">private</span> Map&lt;String, Object&gt; cache = <span class="keyword">new</span> <span class="title class_">ConcurrentHashMap</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 优化：使用带过期时间的缓存</span></span><br><span class="line"><span class="meta">@Autowired</span></span><br><span class="line"><span class="keyword">private</span> RedisTemplate&lt;String, Object&gt; redisTemplate;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> Object <span class="title function_">get</span><span class="params">(String key)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> redisTemplate.opsForValue().get(key);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 或者使用Caffeine（本地缓存）</span></span><br><span class="line"><span class="keyword">private</span> Cache&lt;String, Object&gt; cache = Caffeine.newBuilder()</span><br><span class="line">    .maximumSize(<span class="number">10000</span>)</span><br><span class="line">    .expireAfterWrite(<span class="number">1</span>, TimeUnit.HOURS)</span><br><span class="line">    .build();</span><br></pre></td></tr></table></figure>
-
-<h4 id="3-及时释放资源"><a href="#3-及时释放资源" class="headerlink" title="3. 及时释放资源"></a>3. 及时释放资源</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 使用try-with-resources</span></span><br><span class="line"><span class="keyword">try</span> (<span class="type">Connection</span> <span class="variable">conn</span> <span class="operator">=</span> dataSource.getConnection();</span><br><span class="line">     <span class="type">PreparedStatement</span> <span class="variable">stmt</span> <span class="operator">=</span> conn.prepareStatement(sql)) &#123;</span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 及时清理ThreadLocal</span></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// 使用ThreadLocal</span></span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    threadLocal.remove();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="方案四：选择合适的GC"><a href="#方案四：选择合适的GC" class="headerlink" title="方案四：选择合适的GC"></a>方案四：选择合适的GC</h3><h4 id="G1GC（推荐，JDK-11-）"><a href="#G1GC（推荐，JDK-11-）" class="headerlink" title="G1GC（推荐，JDK 11+）"></a>G1GC（推荐，JDK 11+）</h4><p>适合：</p>
+<p><strong>优点</strong>：</p>
 <ul>
-<li>堆内存较大（&gt;4GB）</li>
-<li>低延迟要求</li>
-<li>吞吐量要求不是特别高</li>
+<li>参数清晰，易于理解</li>
+<li>支持可选参数</li>
+<li>避免参数顺序错误</li>
 </ul>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-XX:+UseG1GC</span><br><span class="line">-XX:MaxGCPauseMillis=200</span><br></pre></td></tr></table></figure>
+<h2 id="5-单例模式：配置管理"><a href="#5-单例模式：配置管理" class="headerlink" title="5. 单例模式：配置管理"></a>5. 单例模式：配置管理</h2><h3 id="场景-4"><a href="#场景-4" class="headerlink" title="场景"></a>场景</h3><p>全局配置对象，只需要一个实例。</p>
+<h3 id="实现（Spring中通常使用-Component）"><a href="#实现（Spring中通常使用-Component）" class="headerlink" title="实现（Spring中通常使用@Component）"></a>实现（Spring中通常使用@Component）</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="meta">@ConfigurationProperties(prefix = &quot;app&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">AppConfig</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="keyword">private</span> String version;</span><br><span class="line">    <span class="comment">// getter/setter</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h4 id="ZGC（JDK-11-，实验性）"><a href="#ZGC（JDK-11-，实验性）" class="headerlink" title="ZGC（JDK 11+，实验性）"></a>ZGC（JDK 11+，实验性）</h4><p>适合：</p>
-<ul>
-<li>超大堆内存（&gt;32GB）</li>
-<li>极低延迟要求（&lt;10ms）</li>
-</ul>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-XX:+UnlockExperimentalVMOptions</span><br><span class="line">-XX:+UseZGC</span><br></pre></td></tr></table></figure>
-
-<h4 id="ParallelGC"><a href="#ParallelGC" class="headerlink" title="ParallelGC"></a>ParallelGC</h4><p>适合：</p>
-<ul>
-<li>吞吐量优先</li>
-<li>可以容忍较长的GC暂停</li>
-</ul>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">-XX:+UseParallelGC</span><br><span class="line">-XX:ParallelGCThreads=8</span><br></pre></td></tr></table></figure>
-
-<h2 id="最终配置"><a href="#最终配置" class="headerlink" title="最终配置"></a>最终配置</h2><p>结合实际情况，最终使用的JVM参数：</p>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 堆内存</span></span><br><span class="line">-Xms4g</span><br><span class="line">-Xmx4g</span><br><span class="line"></span><br><span class="line"><span class="comment"># G1GC</span></span><br><span class="line">-XX:+UseG1GC</span><br><span class="line">-XX:MaxGCPauseMillis=200</span><br><span class="line">-XX:G1HeapRegionSize=16m</span><br><span class="line">-XX:InitiatingHeapOccupancyPercent=45</span><br><span class="line"></span><br><span class="line"><span class="comment"># GC日志</span></span><br><span class="line">-XX:+PrintGCDetails</span><br><span class="line">-XX:+PrintGCDateStamps</span><br><span class="line">-Xloggc:/var/log/gc.log</span><br><span class="line">-XX:+UseGCLogFileRotation</span><br><span class="line">-XX:NumberOfGCLogFiles=10</span><br><span class="line">-XX:GCLogFileSize=10M</span><br><span class="line"></span><br><span class="line"><span class="comment"># 堆转储</span></span><br><span class="line">-XX:+HeapDumpOnOutOfMemoryError</span><br><span class="line">-XX:HeapDumpPath=/var/log/heap.hprof</span><br><span class="line"></span><br><span class="line"><span class="comment"># 其他</span></span><br><span class="line">-XX:+DisableExplicitGC  <span class="comment"># 禁用System.gc()</span></span><br><span class="line">-XX:+ExitOnOutOfMemoryError  <span class="comment"># OOM时退出</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="优化效果"><a href="#优化效果" class="headerlink" title="优化效果"></a>优化效果</h2><p>优化前后对比：</p>
-<table>
-<thead>
-<tr>
-<th>指标</th>
-<th>优化前</th>
-<th>优化后</th>
-<th>改善</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Young GC频率</td>
-<td>每10秒</td>
-<td>每30秒</td>
-<td>减少67%</td>
-</tr>
-<tr>
-<td>Young GC耗时</td>
-<td>100-200ms</td>
-<td>50-100ms</td>
-<td>减少50%</td>
-</tr>
-<tr>
-<td>Full GC频率</td>
-<td>每天3-5次</td>
-<td>几乎为0</td>
-<td>显著改善</td>
-</tr>
-<tr>
-<td>平均响应时间</td>
-<td>200ms</td>
-<td>150ms</td>
-<td>改善25%</td>
-</tr>
-<tr>
-<td>99分位响应时间</td>
-<td>500ms</td>
-<td>300ms</td>
-<td>改善40%</td>
-</tr>
-</tbody></table>
-<h2 id="监控建议"><a href="#监控建议" class="headerlink" title="监控建议"></a>监控建议</h2><ol>
-<li><strong>GC日志分析</strong>：定期分析GC日志，关注GC频率和耗时</li>
-<li><strong>堆内存监控</strong>：监控堆内存使用情况</li>
-<li><strong>告警设置</strong>：Full GC频率、GC耗时超过阈值时告警</li>
-<li><strong>性能测试</strong>：定期进行压力测试，验证GC表现</li>
-</ol>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>JVM GC调优是一个持续的过程：</p>
+<p>Spring会自动管理为单例。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>设计模式的使用原则：</p>
 <ol>
-<li><strong>监控先行</strong>：先监控，再优化</li>
-<li><strong>代码优化</strong>：优先优化代码，减少对象创建</li>
-<li><strong>参数调优</strong>：根据实际情况调整GC参数</li>
-<li><strong>持续改进</strong>：定期分析，持续优化</li>
+<li><strong>不要过度设计</strong>：简单场景不需要设计模式</li>
+<li><strong>理解模式本质</strong>：理解模式要解决的问题，而不是死记硬背</li>
+<li><strong>结合实际场景</strong>：根据实际业务选择合适的模式</li>
+<li><strong>保持简单</strong>：能用简单方式解决就不要用复杂模式</li>
 </ol>
 <hr>
-<p><strong>经验</strong>：GC调优没有银弹，需要根据实际业务场景和硬件环境进行调整。最重要的是先优化代码，再调整参数。</p>
+<p><strong>思考</strong>：设计模式是工具，不是目的。好的代码应该是清晰、易维护的，而不是为了使用设计模式而使用。</p>
 ]]></content>
       <categories>
-        <category>Debug经验</category>
+        <category>后端开发</category>
       </categories>
       <tags>
-        <tag>性能优化</tag>
-        <tag>JVM</tag>
-        <tag>GC</tag>
+        <tag>后端开发</tag>
+        <tag>设计模式</tag>
+        <tag>代码设计</tag>
       </tags>
   </entry>
   <entry>
@@ -1232,69 +1295,6 @@
         <tag>后端开发</tag>
         <tag>分布式系统</tag>
         <tag>ID生成</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>设计模式在实际项目中的应用</title>
-    <url>/2025/09/12/2025-09-12-design-patterns-in-practice/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>设计模式不是银弹，但合理使用能让代码更清晰、易维护。记录一些在实际项目中应用设计模式的案例。</p>
-<h2 id="1-策略模式：支付方式选择"><a href="#1-策略模式：支付方式选择" class="headerlink" title="1. 策略模式：支付方式选择"></a>1. 策略模式：支付方式选择</h2><h3 id="场景"><a href="#场景" class="headerlink" title="场景"></a>场景</h3><p>系统支持多种支付方式：支付宝、微信、银行卡。不同支付方式的处理逻辑不同。</p>
-<h3 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 支付策略接口</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">PaymentStrategy</span> &#123;</span><br><span class="line">    PaymentResult <span class="title function_">pay</span><span class="params">(PaymentRequest request)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 支付宝支付</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">AlipayStrategy</span> <span class="keyword">implements</span> <span class="title class_">PaymentStrategy</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> PaymentResult <span class="title function_">pay</span><span class="params">(PaymentRequest request)</span> &#123;</span><br><span class="line">        <span class="comment">// 支付宝支付逻辑</span></span><br><span class="line">        <span class="keyword">return</span> alipayService.pay(request);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 微信支付</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">WechatPayStrategy</span> <span class="keyword">implements</span> <span class="title class_">PaymentStrategy</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> PaymentResult <span class="title function_">pay</span><span class="params">(PaymentRequest request)</span> &#123;</span><br><span class="line">        <span class="comment">// 微信支付逻辑</span></span><br><span class="line">        <span class="keyword">return</span> wechatPayService.pay(request);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 支付策略工厂</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PaymentStrategyFactory</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;PaymentType, PaymentStrategy&gt; strategies;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">PaymentStrategyFactory</span><span class="params">(List&lt;PaymentStrategy&gt; strategyList)</span> &#123;</span><br><span class="line">        strategies = strategyList.stream()</span><br><span class="line">            .collect(Collectors.toMap(</span><br><span class="line">                <span class="built_in">this</span>::getPaymentType,</span><br><span class="line">                Function.identity()</span><br><span class="line">            ));</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> PaymentStrategy <span class="title function_">getStrategy</span><span class="params">(PaymentType type)</span> &#123;</span><br><span class="line">        <span class="type">PaymentStrategy</span> <span class="variable">strategy</span> <span class="operator">=</span> strategies.get(type);</span><br><span class="line">        <span class="keyword">if</span> (strategy == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">UnsupportedPaymentTypeException</span>(<span class="string">&quot;不支持的支付方式: &quot;</span> + type);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> strategy;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">private</span> PaymentType <span class="title function_">getPaymentType</span><span class="params">(PaymentStrategy strategy)</span> &#123;</span><br><span class="line">        <span class="comment">// 根据策略类型返回支付类型</span></span><br><span class="line">        <span class="keyword">if</span> (strategy <span class="keyword">instanceof</span> AlipayStrategy) &#123;</span><br><span class="line">            <span class="keyword">return</span> PaymentType.ALIPAY;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (strategy <span class="keyword">instanceof</span> WechatPayStrategy) &#123;</span><br><span class="line">            <span class="keyword">return</span> PaymentType.WECHAT;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用</span></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">PaymentService</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> PaymentStrategyFactory strategyFactory;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> PaymentResult <span class="title function_">pay</span><span class="params">(PaymentRequest request)</span> &#123;</span><br><span class="line">        <span class="type">PaymentStrategy</span> <span class="variable">strategy</span> <span class="operator">=</span> strategyFactory.getStrategy(request.getType());</span><br><span class="line">        <span class="keyword">return</span> strategy.pay(request);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>优点</strong>：</p>
-<ul>
-<li>易于扩展新的支付方式</li>
-<li>各支付方式逻辑解耦</li>
-<li>符合开闭原则</li>
-</ul>
-<h2 id="2-模板方法模式：订单处理流程"><a href="#2-模板方法模式：订单处理流程" class="headerlink" title="2. 模板方法模式：订单处理流程"></a>2. 模板方法模式：订单处理流程</h2><h3 id="场景-1"><a href="#场景-1" class="headerlink" title="场景"></a>场景</h3><p>不同类型的订单（普通订单、团购订单、秒杀订单）处理流程相似，但某些步骤不同。</p>
-<h3 id="实现-1"><a href="#实现-1" class="headerlink" title="实现"></a>实现</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 抽象订单处理器</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">class</span> <span class="title class_">AbstractOrderProcessor</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 处理订单（模板方法）</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title function_">processOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 1. 验证订单</span></span><br><span class="line">        validateOrder(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 2. 扣减库存（子类实现）</span></span><br><span class="line">        deductStock(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 3. 计算价格（子类实现）</span></span><br><span class="line">        calculatePrice(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 4. 保存订单</span></span><br><span class="line">        saveOrder(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 5. 发送通知（子类实现）</span></span><br><span class="line">        sendNotification(order);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">validateOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 通用验证逻辑</span></span><br><span class="line">        <span class="keyword">if</span> (order == <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;订单不能为空&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Order order)</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title function_">calculatePrice</span><span class="params">(Order order)</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">saveOrder</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 通用保存逻辑</span></span><br><span class="line">        orderMapper.insert(order);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title function_">sendNotification</span><span class="params">(Order order)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 普通订单处理器</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">NormalOrderProcessor</span> <span class="keyword">extends</span> <span class="title class_">AbstractOrderProcessor</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 普通订单库存扣减逻辑</span></span><br><span class="line">        inventoryService.deductStock(order.getProductId(), order.getQuantity());</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">calculatePrice</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 普通订单价格计算</span></span><br><span class="line">        order.setTotalPrice(order.getProductPrice() * order.getQuantity());</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">sendNotification</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 发送普通订单通知</span></span><br><span class="line">        emailService.sendOrderConfirmEmail(order);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 秒杀订单处理器</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SeckillOrderProcessor</span> <span class="keyword">extends</span> <span class="title class_">AbstractOrderProcessor</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">deductStock</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 秒杀订单库存扣减（需要加锁）</span></span><br><span class="line">        seckillService.deductStockWithLock(order.getProductId(), order.getQuantity());</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">calculatePrice</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 秒杀订单价格计算（使用秒杀价）</span></span><br><span class="line">        order.setTotalPrice(order.getSeckillPrice() * order.getQuantity());</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">void</span> <span class="title function_">sendNotification</span><span class="params">(Order order)</span> &#123;</span><br><span class="line">        <span class="comment">// 发送秒杀订单通知</span></span><br><span class="line">        smsService.sendSeckillSuccessSms(order);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>优点</strong>：</p>
-<ul>
-<li>复用公共逻辑</li>
-<li>子类只需实现差异部分</li>
-<li>流程统一，易于维护</li>
-</ul>
-<h2 id="3-观察者模式：订单状态变更通知"><a href="#3-观察者模式：订单状态变更通知" class="headerlink" title="3. 观察者模式：订单状态变更通知"></a>3. 观察者模式：订单状态变更通知</h2><h3 id="场景-2"><a href="#场景-2" class="headerlink" title="场景"></a>场景</h3><p>订单状态变更时，需要通知多个系统：短信系统、邮件系统、物流系统等。</p>
-<h3 id="实现-2"><a href="#实现-2" class="headerlink" title="实现"></a>实现</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 事件</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderStatusChangedEvent</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> Long orderId;</span><br><span class="line">    <span class="keyword">private</span> OrderStatus oldStatus;</span><br><span class="line">    <span class="keyword">private</span> OrderStatus newStatus;</span><br><span class="line">    <span class="comment">// getter/setter</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 观察者接口</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">OrderStatusListener</span> &#123;</span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">onStatusChanged</span><span class="params">(OrderStatusChangedEvent event)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 短信通知观察者</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SmsNotificationListener</span> <span class="keyword">implements</span> <span class="title class_">OrderStatusListener</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">onStatusChanged</span><span class="params">(OrderStatusChangedEvent event)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (event.getNewStatus() == OrderStatus.PAID) &#123;</span><br><span class="line">            smsService.sendPaymentSuccessSms(event.getOrderId());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 邮件通知观察者</span></span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">EmailNotificationListener</span> <span class="keyword">implements</span> <span class="title class_">OrderStatusListener</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">onStatusChanged</span><span class="params">(OrderStatusChangedEvent event)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (event.getNewStatus() == OrderStatus.SHIPPED) &#123;</span><br><span class="line">            emailService.sendShippingEmail(event.getOrderId());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 事件发布者</span></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderService</span> &#123;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> ApplicationEventPublisher eventPublisher;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">updateOrderStatus</span><span class="params">(Long orderId, OrderStatus newStatus)</span> &#123;</span><br><span class="line">        <span class="type">Order</span> <span class="variable">order</span> <span class="operator">=</span> orderMapper.selectById(orderId);</span><br><span class="line">        <span class="type">OrderStatus</span> <span class="variable">oldStatus</span> <span class="operator">=</span> order.getStatus();</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 更新状态</span></span><br><span class="line">        order.setStatus(newStatus);</span><br><span class="line">        orderMapper.updateById(order);</span><br><span class="line">        </span><br><span class="line">        <span class="comment">// 发布事件</span></span><br><span class="line">        <span class="type">OrderStatusChangedEvent</span> <span class="variable">event</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">OrderStatusChangedEvent</span>();</span><br><span class="line">        event.setOrderId(orderId);</span><br><span class="line">        event.setOldStatus(oldStatus);</span><br><span class="line">        event.setNewStatus(newStatus);</span><br><span class="line">        eventPublisher.publishEvent(event);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>优点</strong>：</p>
-<ul>
-<li>解耦：订单服务不需要知道有哪些监听者</li>
-<li>易扩展：新增监听者只需实现接口</li>
-<li>符合开闭原则</li>
-</ul>
-<h2 id="4-建造者模式：复杂对象构建"><a href="#4-建造者模式：复杂对象构建" class="headerlink" title="4. 建造者模式：复杂对象构建"></a>4. 建造者模式：复杂对象构建</h2><h3 id="场景-3"><a href="#场景-3" class="headerlink" title="场景"></a>场景</h3><p>构建复杂的查询条件对象，有很多可选参数。</p>
-<h3 id="实现-3"><a href="#实现-3" class="headerlink" title="实现"></a>实现</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 查询条件</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderQuery</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> Long userId;</span><br><span class="line">    <span class="keyword">private</span> OrderStatus status;</span><br><span class="line">    <span class="keyword">private</span> LocalDateTime startTime;</span><br><span class="line">    <span class="keyword">private</span> LocalDateTime endTime;</span><br><span class="line">    <span class="keyword">private</span> Integer minAmount;</span><br><span class="line">    <span class="keyword">private</span> Integer maxAmount;</span><br><span class="line">    <span class="keyword">private</span> String keyword;</span><br><span class="line">    <span class="comment">// getter/setter</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 建造者</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">Builder</span> &#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="type">OrderQuery</span> <span class="variable">query</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">OrderQuery</span>();</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">userId</span><span class="params">(Long userId)</span> &#123;</span><br><span class="line">            query.setUserId(userId);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">status</span><span class="params">(OrderStatus status)</span> &#123;</span><br><span class="line">            query.setStatus(status);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">timeRange</span><span class="params">(LocalDateTime start, LocalDateTime end)</span> &#123;</span><br><span class="line">            query.setStartTime(start);</span><br><span class="line">            query.setEndTime(end);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">amountRange</span><span class="params">(Integer min, Integer max)</span> &#123;</span><br><span class="line">            query.setMinAmount(min);</span><br><span class="line">            query.setMaxAmount(max);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> Builder <span class="title function_">keyword</span><span class="params">(String keyword)</span> &#123;</span><br><span class="line">            query.setKeyword(keyword);</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">public</span> OrderQuery <span class="title function_">build</span><span class="params">()</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> query;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用</span></span><br><span class="line"><span class="type">OrderQuery</span> <span class="variable">query</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">OrderQuery</span>.Builder()</span><br><span class="line">    .userId(<span class="number">123L</span>)</span><br><span class="line">    .status(OrderStatus.PAID)</span><br><span class="line">    .timeRange(startTime, endTime)</span><br><span class="line">    .amountRange(<span class="number">100</span>, <span class="number">1000</span>)</span><br><span class="line">    .build();</span><br></pre></td></tr></table></figure>
-
-<p><strong>优点</strong>：</p>
-<ul>
-<li>参数清晰，易于理解</li>
-<li>支持可选参数</li>
-<li>避免参数顺序错误</li>
-</ul>
-<h2 id="5-单例模式：配置管理"><a href="#5-单例模式：配置管理" class="headerlink" title="5. 单例模式：配置管理"></a>5. 单例模式：配置管理</h2><h3 id="场景-4"><a href="#场景-4" class="headerlink" title="场景"></a>场景</h3><p>全局配置对象，只需要一个实例。</p>
-<h3 id="实现（Spring中通常使用-Component）"><a href="#实现（Spring中通常使用-Component）" class="headerlink" title="实现（Spring中通常使用@Component）"></a>实现（Spring中通常使用@Component）</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="meta">@ConfigurationProperties(prefix = &quot;app&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">AppConfig</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="keyword">private</span> String version;</span><br><span class="line">    <span class="comment">// getter/setter</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>Spring会自动管理为单例。</p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>设计模式的使用原则：</p>
-<ol>
-<li><strong>不要过度设计</strong>：简单场景不需要设计模式</li>
-<li><strong>理解模式本质</strong>：理解模式要解决的问题，而不是死记硬背</li>
-<li><strong>结合实际场景</strong>：根据实际业务选择合适的模式</li>
-<li><strong>保持简单</strong>：能用简单方式解决就不要用复杂模式</li>
-</ol>
-<hr>
-<p><strong>思考</strong>：设计模式是工具，不是目的。好的代码应该是清晰、易维护的，而不是为了使用设计模式而使用。</p>
-]]></content>
-      <categories>
-        <category>后端开发</category>
-      </categories>
-      <tags>
-        <tag>后端开发</tag>
-        <tag>设计模式</tag>
-        <tag>代码设计</tag>
       </tags>
   </entry>
   <entry>
