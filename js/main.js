@@ -1,4 +1,123 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // 确保 btf 对象已初始化
+  if (!window.btf) {
+    window.btf = {}
+  }
+  const btf = window.btf
+  
+  // 创建一个安全的 addEventListenerPjax 包装函数
+  const safeAddEventListenerPjax = (ele, event, fn, option = false) => {
+    if (btf && btf.addEventListenerPjax) {
+      btf.addEventListenerPjax(ele, event, fn, option)
+    } else {
+      ele.addEventListener(event, fn, option)
+    }
+  }
+  
+  // 创建一个安全的 throttle 包装函数
+  const safeThrottle = (func, wait = 300) => {
+    if (btf && btf.throttle) {
+      return btf.throttle(func, wait)
+    } else {
+      // 降级方案：简单的节流实现
+      let timeout
+      return (...args) => {
+        if (!timeout) {
+          timeout = setTimeout(() => {
+            func(...args)
+            timeout = null
+          }, wait)
+        }
+      }
+    }
+  }
+  
+  // 创建一个安全的 loadLightbox 包装函数
+  const safeLoadLightbox = (images) => {
+    if (btf && btf.loadLightbox) {
+      btf.loadLightbox(images)
+    } else {
+      // 降级方案：如果 loadLightbox 不存在，图片仍然可以正常显示，只是没有灯箱效果
+      // 可以选择添加简单的点击事件来打开图片，或者什么都不做
+      console.warn('btf.loadLightbox is not available, lightbox functionality disabled')
+    }
+  }
+  
+  // 创建一个安全的 scrollToDest 包装函数
+  const safeScrollToDest = (pos, time = 500) => {
+    if (btf && btf.scrollToDest) {
+      btf.scrollToDest(pos, time)
+    } else {
+      // 降级方案：使用原生平滑滚动
+      const currentPos = window.scrollY
+      const pageHeader = document.getElementById('page-header')
+      let adjustedPos = pos
+      
+      if (pageHeader && pageHeader.classList.contains('fixed')) {
+        adjustedPos = pos - 70
+      } else if (currentPos > pos) {
+        adjustedPos = pos - 70
+      }
+      
+      if ('scrollBehavior' in document.documentElement.style) {
+        window.scrollTo({
+          top: adjustedPos,
+          behavior: 'smooth'
+        })
+      } else {
+        // 降级到简单的滚动
+        window.scrollTo(0, adjustedPos)
+      }
+    }
+  }
+  
+  // 创建一个安全的 switchComments 包装函数
+  const safeSwitchComments = (el = document, path) => {
+    if (btf && btf.switchComments) {
+      btf.switchComments(el, path)
+    } else {
+      // 降级方案：如果 switchComments 不存在，评论切换功能将不可用
+      // 但评论仍然可以正常显示
+      const switchBtn = el.querySelector('#switch-btn')
+      if (switchBtn) {
+        console.warn('btf.switchComments is not available, comment switching disabled')
+      }
+    }
+  }
+  
+  // 创建一个安全的 wrap 包装函数
+  const safeWrap = (selector, eleType, options) => {
+    if (btf && btf.wrap) {
+      btf.wrap(selector, eleType, options)
+    } else {
+      // 降级方案：手动实现 wrap 功能
+      const createEle = document.createElement(eleType)
+      for (const [key, value] of Object.entries(options)) {
+        createEle.setAttribute(key, value)
+      }
+      selector.parentNode.insertBefore(createEle, selector)
+      createEle.appendChild(selector)
+    }
+  }
+  
+  // 创建一个安全的 getScrollPercent 包装函数
+  const safeGetScrollPercent = (currentTop, ele) => {
+    if (btf && btf.getScrollPercent) {
+      return btf.getScrollPercent(currentTop, ele)
+    } else {
+      // 降级方案：手动计算滚动百分比
+      const docHeight = ele.clientHeight || ele.scrollHeight
+      const winHeight = window.innerHeight
+      const headerHeight = ele.offsetTop || 0
+      const contentMath = Math.max(docHeight - winHeight, document.documentElement.scrollHeight - winHeight)
+      
+      if (contentMath <= 0) return 0
+      
+      const scrollPercent = (currentTop - headerHeight) / contentMath
+      return Math.max(0, Math.min(100, Math.round(scrollPercent * 100)))
+    }
+  }
+  
   let headerContentWidth, $nav
   let mobileSidebarOpen = false
 
@@ -19,7 +138,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // 初始化header
   const initAdjust = () => {
     adjustMenu(true)
-    $nav.classList.add('show')
+    // 确保 $nav 存在后再添加 show 类
+    if ($nav) {
+      $nav.classList.add('show')
+      // 确保导航栏立即显示，不受其他CSS影响
+      $nav.style.opacity = '1'
+    } else {
+      // 如果 $nav 不存在，延迟重试
+      setTimeout(() => {
+        $nav = document.getElementById('nav')
+        if ($nav) {
+          $nav.classList.add('show')
+          $nav.style.opacity = '1'
+        }
+      }, 100)
+    }
   }
 
   // sidebar menus
@@ -43,11 +176,11 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   const scrollDownInIndex = () => {
     const handleScrollToDest = () => {
-      btf.scrollToDest(document.getElementById('content-inner').offsetTop, 300)
+      safeScrollToDest(document.getElementById('content-inner').offsetTop, 300)
     }
 
     const $scrollDownEle = document.getElementById('scroll-down')
-    $scrollDownEle && btf.addEventListenerPjax($scrollDownEle, 'click', handleScrollToDest)
+    $scrollDownEle && safeAddEventListenerPjax($scrollDownEle, 'click', handleScrollToDest)
   }
 
   /**
@@ -163,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const hlTools = document.createElement('div')
         hlTools.className = `highlight-tools ${highlightShrinkClass}`
         hlTools.innerHTML = highlightMacStyleEle + highlightShrinkEle + lang + highlightCopyEle + highlightFullpageEle
-        btf.addEventListenerPjax(hlTools, 'click', highlightToolsFn)
+        safeAddEventListenerPjax(hlTools, 'click', highlightToolsFn)
         fragment.appendChild(hlTools)
       }
 
@@ -171,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ele = document.createElement('div')
         ele.className = 'code-expand-btn'
         ele.innerHTML = '<i class="fas fa-angle-double-down"></i>'
-        btf.addEventListenerPjax(ele, 'click', expandCode)
+        safeAddEventListenerPjax(ele, 'click', expandCode)
         fragment.appendChild(ele)
       }
 
@@ -180,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     $figureHighlight.forEach(item => {
       let langName = ''
-      if (isPrismjs) btf.wrap(item, 'figure', { class: 'highlight' })
+      if (isPrismjs) safeWrap(item, 'figure', { class: 'highlight' })
 
       if (!highlightLang) {
         createEle('', item)
@@ -216,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
    * Lightbox
    */
   const runLightbox = () => {
-    btf.loadLightbox(document.querySelectorAll('#article-container img:not(.no-lightbox)'))
+    safeLoadLightbox(document.querySelectorAll('#article-container img:not(.no-lightbox)'))
   }
 
   /**
@@ -303,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const { updated, isResize, mounted } = e
       if (!updated.length || !mounted.length || isResize) return
 
-      btf.loadLightbox(container.querySelectorAll('img:not(.medium-zoom-image)'))
+      safeLoadLightbox(container.querySelectorAll('img:not(.medium-zoom-image)'))
 
       if (ig.getGroups().length === maxGroupKey) {
         btf.setLoading.remove(container)
@@ -379,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
    * rightside scroll percent
    */
   const rightsideScrollPercent = currentTop => {
-    const scrollPercent = btf.getScrollPercent(currentTop, document.body)
+    const scrollPercent = safeGetScrollPercent(currentTop, document.body)
     const goUpElement = document.getElementById('go-up')
 
     if (scrollPercent < 95) {
@@ -421,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let flag = ''
-    const scrollTask = btf.throttle(() => {
+    const scrollTask = safeThrottle(() => {
       const currentTop = window.scrollY || document.documentElement.scrollTop
       const isDown = scrollDirection(currentTop)
       if (currentTop > 56) {
@@ -455,7 +588,10 @@ document.addEventListener('DOMContentLoaded', () => {
       checkDocumentHeight()
     }, 300)
 
-    btf.addEventListenerPjax(window, 'scroll', scrollTask, { passive: true })
+    safeAddEventListenerPjax(window, 'scroll', scrollTask, { passive: true })
+    
+    // 页面加载时立即执行一次滚动检查，确保导航栏显示
+    scrollTask()
   }
 
   /**
@@ -468,13 +604,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!($article && (isToc || isAnchor))) return
 
-    let $tocLink, $cardToc, autoScrollToc, $tocPercentage, isExpand
+    let $tocLink, $cardToc, autoScrollToc, isExpand
 
     if (isToc) {
       const $cardTocLayout = document.getElementById('card-toc')
       $cardToc = $cardTocLayout.querySelector('.toc-content')
       $tocLink = $cardToc.querySelectorAll('.toc-link')
-      $tocPercentage = $cardTocLayout.querySelector('.toc-percentage')
       isExpand = $cardToc.classList.contains('is-expand')
 
       // toc元素點擊
@@ -483,13 +618,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!target) return
 
         e.preventDefault()
-        btf.scrollToDest(btf.getEleTop(document.getElementById(decodeURI(target.getAttribute('href')).replace('#', ''))), 300)
+        const targetElement = document.getElementById(decodeURI(target.getAttribute('href')).replace('#', ''))
+        const targetTop = btf && btf.getEleTop ? btf.getEleTop(targetElement) : targetElement.offsetTop
+        safeScrollToDest(targetTop, 300)
         if (window.innerWidth < 900) {
           $cardTocLayout.classList.remove('open')
         }
       }
 
-      btf.addEventListenerPjax($cardToc, 'click', tocItemClickFn)
+      safeAddEventListenerPjax($cardToc, 'click', tocItemClickFn)
 
       autoScrollToc = item => {
         const sidebarHeight = $cardToc.clientHeight
@@ -556,15 +693,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // main of scroll
-    const tocScrollFn = btf.throttle(() => {
+    const tocScrollFn = safeThrottle(() => {
       const currentTop = window.scrollY || document.documentElement.scrollTop
-      if (isToc && GLOBAL_CONFIG.percent.toc) {
-        $tocPercentage.textContent = btf.getScrollPercent(currentTop, $article) + '%'
-      }
       findHeadPosition(currentTop)
     }, 100)
 
-    btf.addEventListenerPjax(window, 'scroll', tocScrollFn, { passive: true })
+    safeAddEventListenerPjax(window, 'scroll', tocScrollFn, { passive: true })
   }
 
   const handleThemeChange = mode => {
@@ -628,7 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
       hideLayout.classList.toggle('show')
     },
     'go-up': () => { // Back to top
-      btf.scrollToDest(0, 500)
+      safeScrollToDest(0, 500)
     },
     'hide-aside-btn': () => { // Hide aside
       const $htmlDom = document.documentElement.classList
@@ -689,7 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const openMobileMenu = () => {
     const toggleMenu = document.getElementById('toggle-menu')
     if (!toggleMenu) return
-    btf.addEventListenerPjax(toggleMenu, 'click', () => { sidebarFn.open() })
+    safeAddEventListenerPjax(toggleMenu, 'click', () => { sidebarFn.open() })
   }
 
   /**
@@ -746,7 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     $table.forEach(item => {
       if (!item.closest('.highlight')) {
-        btf.wrap(item, 'div', { class: 'table-wrap' })
+        safeWrap(item, 'div', { class: 'table-wrap' })
       }
     })
   }
@@ -789,13 +923,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleToTopClick = tabElement => e => {
       if (e.target.closest('button')) {
-        btf.scrollToDest(btf.getEleTop(tabElement), 300)
+        const tabTop = btf && btf.getEleTop ? btf.getEleTop(tabElement) : tabElement.offsetTop
+        safeScrollToDest(tabTop, 300)
       }
     }
 
     navTabsElements.forEach(tabElement => {
-      btf.addEventListenerPjax(tabElement.firstElementChild, 'click', handleNavClick)
-      btf.addEventListenerPjax(tabElement.lastElementChild, 'click', handleToTopClick(tabElement))
+      safeAddEventListenerPjax(tabElement.firstElementChild, 'click', handleNavClick)
+      safeAddEventListenerPjax(tabElement.lastElementChild, 'click', handleToTopClick(tabElement))
     })
   }
 
@@ -810,7 +945,7 @@ document.addEventListener('DOMContentLoaded', () => {
         target.parentNode.classList.toggle('expand')
       }
     }
-    btf.addEventListenerPjax(cardCategory, 'click', handleToggleBtn, true)
+    safeAddEventListenerPjax(cardCategory, 'click', handleToggleBtn, true)
   }
 
   const addPostOutdateNotice = () => {
@@ -911,8 +1046,17 @@ document.addEventListener('DOMContentLoaded', () => {
     scrollFn()
 
     forPostFn()
-    GLOBAL_CONFIG_SITE.pageType !== 'shuoshuo' && btf.switchComments(document)
+    GLOBAL_CONFIG_SITE.pageType !== 'shuoshuo' && safeSwitchComments(document)
     openMobileMenu()
+    
+    // 确保导航栏在 PJAX 切换后也能正确显示
+    setTimeout(() => {
+      const $navElement = document.getElementById('nav')
+      if ($navElement && !$navElement.classList.contains('show')) {
+        $navElement.classList.add('show')
+        $navElement.style.opacity = '1'
+      }
+    }, 50)
   }
 
   btf.addGlobalFn('pjaxComplete', refreshFn, 'refreshFn')

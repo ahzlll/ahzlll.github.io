@@ -1,62 +1,46 @@
-// 模块标题背景图片（固定）
+// 模块标题背景图片（固定）- 优化版本
 (function() {
-  // 获取网站根路径（支持 GitHub Pages 子目录部署）
-  // 从 window.location 获取基础路径
-  const getBasePath = () => {
-    // 获取当前页面的基础路径
-    const path = window.location.pathname;
-    // 如果路径是根路径或 index.html，说明在根目录
-    if (path === '/' || path === '/index.html') {
-      return '';
-    }
-    // 尝试从路径中提取基础路径（对于子目录部署）
-    // 例如：如果路径是 /repo/2024/01/01/title/，基础路径应该是 /repo
-    // 但对于根域名部署，直接返回空字符串
-    return '';
-  };
+  'use strict';
 
   // 构建图片路径（确保路径正确）
   const getImagePath = (imagePath) => {
-    // 如果图片路径已经是绝对路径（以 / 开头），直接使用
-    if (imagePath.startsWith('/')) {
-      return imagePath;
-    }
-    // 否则拼接基础路径
-    const basePath = getBasePath();
-    return basePath + '/' + imagePath;
+    // 如果已经是绝对路径，直接返回
+    return imagePath.startsWith('/') ? imagePath : '/' + imagePath;
   };
 
   // 各模块对应的背景图片（使用绝对路径，从网站根目录开始）
   const moduleBackgrounds = {
-    'home': '/img/header-bg.jpg',           // 首页
-    'post': '/img/bbb.jpg',           // 文章页
-    'tags': '/img/ccc.png',           // 标签页
-    'categories': '/img/ddd.jpg',     // 分类页
-    'link': '/img/eee.jpg',           // 友链页
-    'archive': '/img/ccc.png',        // 归档页（使用首页图片）
-    'default': '/img/header-bg.jpg'         // 默认（其他页面）
+    'home': '/img/header-bg.jpg',
+    'post': '/img/ddd.jpg',
+    'tags': '/img/ccc.png',
+    'categories': '/img/bbb.jpg',
+    'link': '/img/eee.jpg',
+    'archive': '/img/ccc.png',
+    'default': '/img/header-bg.jpg'
   };
 
-  // 根据页面类型设置对应的背景图片
-  function setModuleBackground() {
-    const pageHeader = document.getElementById('page-header');
-    
-    if (!pageHeader) {
-      // 如果元素不存在，延迟重试
-      setTimeout(setModuleBackground, 50);
-      return;
+  // 缓存 DOM 元素和页面类型
+  let cachedPageHeader = null;
+  let cachedPageType = null;
+
+  // 获取页面类型（缓存结果）
+  function getPageType() {
+    if (cachedPageType !== null) {
+      return cachedPageType;
     }
-    
-    // 获取页面类型
+
+    const pageHeader = document.getElementById('page-header');
+    if (!pageHeader) {
+      return 'default';
+    }
+
     let pageType = 'default';
-    
-    // 通过 page-header 的 class 判断
+
     if (pageHeader.classList.contains('full_page')) {
       pageType = 'home';
     } else if (pageHeader.classList.contains('post-bg')) {
       pageType = 'post';
     } else {
-      // 通过 body-wrap 的 class 判断
       const bodyWrap = document.getElementById('body-wrap');
       if (bodyWrap) {
         if (bodyWrap.classList.contains('type-tags')) {
@@ -66,7 +50,6 @@
         } else if (bodyWrap.classList.contains('type-link')) {
           pageType = 'link';
         } else if (bodyWrap.classList.contains('page') && !bodyWrap.classList.contains('post')) {
-          // 判断是否为归档页（通过 URL 或其他方式）
           const path = window.location.pathname;
           if (path.includes('/archives') || path === '/archives/') {
             pageType = 'archive';
@@ -74,33 +57,115 @@
         }
       }
     }
-    
-    // 获取对应的背景图片
-    const selectedImage = moduleBackgrounds[pageType] || moduleBackgrounds['default'];
-    
-    // 确保图片路径正确（处理 GitHub Pages 部署）
-    const imagePath = getImagePath(selectedImage);
-    
-    // 设置标题区域的背景图片
-    pageHeader.style.backgroundImage = `url(${imagePath})`;
-    pageHeader.style.backgroundPosition = 'center center';
-    pageHeader.style.backgroundSize = 'cover';
-    pageHeader.style.backgroundRepeat = 'no-repeat';
+
+    cachedPageType = pageType;
+    return pageType;
   }
 
-  // 页面加载完成后设置背景
+  // 使用 Intersection Observer 延迟加载背景图片
+  function setModuleBackgroundLazy() {
+    const pageHeader = document.getElementById('page-header');
+    
+    if (!pageHeader) {
+      // 如果元素不存在，使用 requestIdleCallback 延迟重试
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          setTimeout(setModuleBackgroundLazy, 100);
+        }, { timeout: 1000 });
+      } else {
+        setTimeout(setModuleBackgroundLazy, 100);
+      }
+      return;
+    }
+
+    cachedPageHeader = pageHeader;
+
+    // 使用 Intersection Observer 检测元素是否可见
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            // 元素可见时加载背景图片
+            loadBackgroundImage();
+            observer.disconnect();
+          }
+        });
+      }, {
+        rootMargin: '50px' // 提前 50px 开始加载
+      });
+
+      observer.observe(pageHeader);
+    } else {
+      // 不支持 Intersection Observer 时直接加载
+      loadBackgroundImage();
+    }
+  }
+
+  // 加载背景图片
+  function loadBackgroundImage() {
+    const pageHeader = cachedPageHeader || document.getElementById('page-header');
+    if (!pageHeader) return;
+
+    const pageType = getPageType();
+    const selectedImage = moduleBackgrounds[pageType] || moduleBackgrounds['default'];
+    const imagePath = getImagePath(selectedImage);
+
+    // 预加载图片，避免闪烁
+    const img = new Image();
+    img.onload = () => {
+      // 图片加载完成后再设置背景
+      pageHeader.style.backgroundImage = `url(${imagePath})`;
+      pageHeader.style.backgroundPosition = 'center center';
+      pageHeader.style.backgroundSize = 'cover';
+      pageHeader.style.backgroundRepeat = 'no-repeat';
+      // 添加加载完成的类，可用于 CSS 动画
+      pageHeader.classList.add('bg-loaded');
+    };
+    img.onerror = () => {
+      // 图片加载失败时使用默认背景
+      pageHeader.style.backgroundImage = `url(${getImagePath(moduleBackgrounds['default'])})`;
+      pageHeader.style.backgroundPosition = 'center center';
+      pageHeader.style.backgroundSize = 'cover';
+      pageHeader.style.backgroundRepeat = 'no-repeat';
+    };
+    img.src = imagePath;
+  }
+
+  // 初始化函数（延迟执行，不阻塞渲染）
+  function init() {
+    // 使用 requestIdleCallback 延迟执行，不阻塞关键渲染路径
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => {
+        setModuleBackgroundLazy();
+      }, { timeout: 2000 });
+    } else {
+      // 降级方案：使用 setTimeout
+      setTimeout(setModuleBackgroundLazy, 0);
+    }
+  }
+
+  // 页面加载完成后初始化
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setModuleBackground);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    setModuleBackground();
+    init();
   }
 
   // 如果启用了 pjax，在页面切换时也更新背景
-  // 使用双重延迟确保 DOM 已经完全更新
   document.addEventListener('pjax:complete', () => {
-    // 先等待一帧，再执行
+    // 清除缓存
+    cachedPageHeader = null;
+    cachedPageType = null;
+    
+    // 使用 requestAnimationFrame 确保 DOM 已更新
     requestAnimationFrame(() => {
-      setTimeout(setModuleBackground, 50);
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          setModuleBackgroundLazy();
+        }, { timeout: 500 });
+      } else {
+        setTimeout(setModuleBackgroundLazy, 50);
+      }
     });
   });
 })();

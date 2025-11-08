@@ -236,6 +236,71 @@ class LocalSearch {
 
 window.addEventListener('load', () => {
 // Search
+  // 确保 btf 对象已初始化
+  if (!window.btf) {
+    window.btf = {}
+  }
+  const btf = window.btf
+  
+  // 创建安全包装函数
+  const safeOverflowPaddingR = {
+    add: () => {
+      if (btf && btf.overflowPaddingR && btf.overflowPaddingR.add) {
+        btf.overflowPaddingR.add()
+      } else {
+        // 降级方案
+        const paddingRight = window.innerWidth - document.body.clientWidth
+        if (paddingRight > 0) {
+          document.body.style.paddingRight = `${paddingRight}px`
+          document.body.style.overflow = 'hidden'
+        }
+      }
+    },
+    remove: () => {
+      if (btf && btf.overflowPaddingR && btf.overflowPaddingR.remove) {
+        btf.overflowPaddingR.remove()
+      } else {
+        // 降级方案
+        document.body.style.paddingRight = ''
+        document.body.style.overflow = ''
+      }
+    }
+  }
+  
+  const safeAnimateIn = (ele, animation) => {
+    if (btf && btf.animateIn) {
+      btf.animateIn(ele, animation)
+    } else {
+      // 降级方案
+      ele.style.display = 'block'
+      ele.style.animation = animation
+    }
+  }
+  
+  const safeAnimateOut = (ele, animation) => {
+    if (btf && btf.animateOut) {
+      btf.animateOut(ele, animation)
+    } else {
+      // 降级方案
+      const handleAnimationEnd = () => {
+        ele.style.display = ''
+        ele.style.animation = ''
+        ele.removeEventListener('animationend', handleAnimationEnd)
+      }
+      ele.addEventListener('animationend', handleAnimationEnd)
+      ele.style.animation = animation
+    }
+  }
+  
+  const safeIsHidden = (ele) => {
+    if (btf && btf.isHidden) {
+      return btf.isHidden(ele)
+    } else {
+      // 降级方案
+      return ele.offsetHeight === 0 && ele.offsetWidth === 0
+    }
+  }
+  
   const { path, top_n_per_article, unescape, languages, pagination } = GLOBAL_CONFIG.localSearch
   const enablePagination = pagination && pagination.enable
   const localSearch = new LocalSearch({
@@ -490,9 +555,9 @@ window.addEventListener('load', () => {
   }
 
   const openSearch = () => {
-    btf.overflowPaddingR.add()
-    btf.animateIn($searchMask, 'to_show 0.5s')
-    btf.animateIn($searchDialog, 'titleScale 0.5s')
+    safeOverflowPaddingR.add()
+    safeAnimateIn($searchMask, 'to_show 0.5s')
+    safeAnimateIn($searchDialog, 'titleScale 0.5s')
     setTimeout(() => { input.focus() }, 300)
     if (!loadFlag) {
       !localSearch.isfetched && localSearch.fetchData()
@@ -512,14 +577,21 @@ window.addEventListener('load', () => {
   }
 
   const closeSearch = () => {
-    btf.overflowPaddingR.remove()
-    btf.animateOut($searchDialog, 'search_close .5s')
-    btf.animateOut($searchMask, 'to_hide 0.5s')
+    safeOverflowPaddingR.remove()
+    safeAnimateOut($searchDialog, 'search_close .5s')
+    safeAnimateOut($searchMask, 'to_hide 0.5s')
     window.removeEventListener('resize', fixSafariHeight)
   }
 
   const searchClickFn = () => {
-    btf.addEventListenerPjax(document.querySelector('#search-button > .search'), 'click', openSearch)
+    const searchBtn = document.querySelector('#search-button > .search')
+    if (searchBtn) {
+      if (btf && btf.addEventListenerPjax) {
+        btf.addEventListenerPjax(searchBtn, 'click', openSearch)
+      } else {
+        searchBtn.addEventListener('click', openSearch)
+      }
+    }
   }
 
   const searchFnOnce = () => {
@@ -560,7 +632,7 @@ window.addEventListener('load', () => {
 
   // pjax
   window.addEventListener('pjax:complete', () => {
-    !btf.isHidden($searchMask) && closeSearch()
+    !safeIsHidden($searchMask) && closeSearch()
     localSearch.highlightSearchWords(document.getElementById('article-container'))
     searchClickFn()
   })

@@ -8,17 +8,12 @@ body {
   background-color: #FFF0F5 !important; /* Lavender Blush - 偏白的粉色 */
 }
 
-/* 卡片背景色改为白色 */
+/* 卡片和文章容器背景色 - 纯白色（合并transition） */
 #recent-posts .recent-post-item,
 .article-sort-item,
-.card-widget {
-  background-color: #FFFFFF !important; /* 纯白色 */
-  transition: all 0.3s ease;
-}
-
-/* 文章容器背景色 - 纯白色 */
+.card-widget,
 #article-container {
-  background-color: #FFFFFF !important; /* 纯白色背景 */
+  background-color: #FFFFFF !important;
   transition: all 0.3s ease;
 }
 
@@ -33,26 +28,12 @@ body {
   border-color: rgba(255, 105, 180, 0.2) !important;
 }
 
-/* 搜索框背景色 - 白色为主 */
-.search-dialog {
-  background-color: #FFFFFF !important;
-}
-
+/* 搜索框、侧边栏菜单、标签页背景色 - 白色（合并） */
+.search-dialog,
 #local-search-input input,
-#algolia-search-input input {
-  background-color: #FFFFFF !important;
-}
-
-/* 侧边栏菜单背景色 - 白色为主 */
-.sidebar-menu {
-  background-color: #FFFFFF !important;
-}
-
-/* 标签页背景 - 白色为主 */
-.tab-button {
-  background-color: #FFFFFF !important;
-}
-
+#algolia-search-input input,
+.sidebar-menu,
+.tab-button,
 .tab-button-active {
   background-color: #FFFFFF !important;
 }
@@ -170,21 +151,18 @@ blockquote:not(#article-container blockquote) {
   color: #333333 !important; /* 深灰色引用文字 */
 }
 
-/* 覆盖所有可能的绿色边框 - 针对特定元素 */
-.card-widget,
-.recent-post-item,
-.article-sort-item,
-.tag,
-.btn,
-button {
-  border-color: #FF69B4 !important;
-}
-
 /* 文章内的元素使用灰色边框 */
 #article-container .highlight,
 #article-container blockquote,
 #article-container .note {
   border-color: #E0E0E0 !important;
+}
+
+/* 通用边框颜色 - 针对特定元素 */
+.tag,
+.btn,
+button {
+  border-color: #FF69B4 !important;
 }
 
 /* 输入框边框 */
@@ -391,6 +369,21 @@ input[type="search"]:focus {
   font-weight: bold !important;
 }
 
+/* 文章标题白色字体边框效果 */
+#post-info .post-title {
+  -webkit-text-stroke: 1px #ffffff !important;
+  /* 兼容性：使用 text-shadow 作为备用方案 */
+  text-shadow: 
+    -0.5px -0.5px 0 #ffffff,
+    0.5px -0.5px 0 #ffffff,
+    -0.5px 0.5px 0 #ffffff,
+    0.5px 0.5px 0 #ffffff,
+    -1px 0 0 #ffffff,
+    1px 0 0 #ffffff,
+    0 -1px 0 #ffffff,
+    0 1px 0 #ffffff !important;
+}
+
 .post-meta-date,
 .article-meta-date,
 .post-meta-date-created,
@@ -422,16 +415,20 @@ input[type="search"]:focus {
   color: #333333 !important; /* 深灰色表格文字 */
 }
 
-/* 文章标题颜色 - 深色 */
+/* 文章内容里的标题颜色 - 深色（确保在白色背景上可见） */
 #article-container h1,
 #article-container h2,
 #article-container h3,
 #article-container h4,
 #article-container h5,
-#article-container h6,
+#article-container h6 {
+  color: #2c3e50 !important; /* 深色标题 */
+}
+
+/* 文章主标题颜色 - 深色（确保在白色背景上可见） */
 .article-title,
 .post-title {
-  color: #2c3e50 !important; /* 深色标题 */
+  color: #2c3e50 !important;
 }
 
 /* 文章元信息颜色 - 深灰色 */
@@ -516,7 +513,7 @@ input[type="search"]:focus {
   border-color: #FF69B4 !important;
 }
 
-/* 卡片边框粉色+蓝色 */
+/* 卡片边框粉色+蓝色（合并边框和悬停效果） */
 .card-widget,
 .recent-post-item,
 .article-sort-item {
@@ -869,6 +866,7 @@ input[type="search"]:focus {
 [data-theme='dark'] h6 {
   color: rgba(255, 255, 255, 0.9) !important;
 }
+
 
 /* 黑色模式下的段落文字 */
 [data-theme='dark'] p {

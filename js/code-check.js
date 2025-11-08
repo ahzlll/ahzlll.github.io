@@ -23,13 +23,17 @@
       const apiUrl = `https://api.github.com/repos/${username}/${repo}/commits?since=${today}T00:00:00Z&per_page=1`;
       
       const response = await fetch(apiUrl);
-      if (response.ok) {
-        const commits = await response.json();
-        return commits.length > 0;
+      
+      // 如果响应状态不是 200，说明 API 调用失败（可能是 403 权限问题或 404 等）
+      if (!response.ok) {
+        // 静默处理错误，不输出到控制台，直接使用备用方案
+        return checkLocalStorage();
       }
-      return false;
+      
+      const commits = await response.json();
+      return commits.length > 0;
     } catch (error) {
-      console.log('GitHub API 检查失败，使用备用方案:', error);
+      // 静默处理错误，不输出到控制台，直接使用备用方案
       // 如果 GitHub API 失败，使用备用方案：检查本地存储
       return checkLocalStorage();
     }
@@ -42,10 +46,19 @@
     return lastCheck === today;
   }
 
-  // 更新公告内容
-  async function updateAnnouncement() {
+  // 更新公告内容（带重试机制）
+  async function updateAnnouncement(retryCount = 0, maxRetries = 10) {
     const announcementElement = document.querySelector('.announcement_content');
-    if (!announcementElement) return;
+    
+    // 如果元素不存在且还有重试次数，则延迟重试
+    if (!announcementElement) {
+      if (retryCount < maxRetries) {
+        setTimeout(() => {
+          updateAnnouncement(retryCount + 1, maxRetries);
+        }, 100);
+      }
+      return;
+    }
 
     const hasCodeToday = await checkTodayCommits();
     
@@ -77,16 +90,39 @@
     }
   }
 
+  // 初始化函数（延迟执行，不阻塞渲染）
+  function init() {
+    // 等待 DOM 完全加载后再执行
+    if (document.readyState === 'complete') {
+      // 页面已完全加载，直接执行
+      updateAnnouncement();
+    } else {
+      // 等待页面完全加载
+      window.addEventListener('load', () => {
+        // 使用 requestAnimationFrame 确保 DOM 已渲染
+        requestAnimationFrame(() => {
+          updateAnnouncement();
+        });
+      });
+    }
+  }
+
   // 页面加载完成后执行
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateAnnouncement);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    updateAnnouncement();
+    init();
   }
 
   // 如果使用 PJAX，需要在页面切换时重新执行
-  if (window.pjax) {
-    document.addEventListener('pjax:complete', updateAnnouncement);
-  }
+  document.addEventListener('pjax:complete', () => {
+    // 使用 requestAnimationFrame 确保 DOM 已更新
+    requestAnimationFrame(() => {
+      // 延迟执行，确保 PJAX 替换的 DOM 已完全渲染
+      setTimeout(() => {
+        updateAnnouncement();
+      }, 100);
+    });
+  });
 })();
 
