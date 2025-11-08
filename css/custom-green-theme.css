@@ -8,11 +8,11 @@ body {
   background-color: #FFF0F5 !important; /* Lavender Blush - 偏白的粉色 */
 }
 
-/* 卡片背景色改为偏白的粉色 */
+/* 卡片背景色改为白色 */
 #recent-posts .recent-post-item,
 .article-sort-item,
 .card-widget {
-  background-color: #FFF5F5 !important; /* 偏白的粉色 */
+  background-color: #FFFFFF !important; /* 纯白色 */
   transition: all 0.3s ease;
 }
 

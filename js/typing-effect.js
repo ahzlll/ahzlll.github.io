@@ -72,13 +72,7 @@ class TypingEffect {
       if (this.currentCharIndex === 0) {
         // 删除完成，切换到下一句
         this.isDeleting = false;
-        
-        // 如果当前是第一句话，切换到随机句子；否则继续随机选择
-        if (this.currentQuote === this.firstQuote) {
-          this.currentQuote = this.getRandomQuote();
-        } else {
-          this.currentQuote = this.getRandomQuote();
-        }
+        this.currentQuote = this.getRandomQuote();
         
         setTimeout(() => this.type(), this.pauseAfterDelete);
         return;
@@ -117,23 +111,24 @@ class TypingEffect {
   }
 }
 
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
+// 初始化打字机效果（通用函数，消除重复代码）
+function initTypingEffect() {
   const typingElement = document.getElementById('typing-text');
   if (typingElement) {
     const typingEffect = new TypingEffect(typingElement, firstQuote, backendQuotes);
     typingEffect.start();
   }
-});
+}
+
+// 页面加载完成后初始化
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initTypingEffect);
+} else {
+  initTypingEffect();
+}
 
 // 如果使用 PJAX，需要在页面切换时重新初始化
 if (window.pjax) {
-  document.addEventListener('pjax:complete', function() {
-    const typingElement = document.getElementById('typing-text');
-    if (typingElement && document.getElementById('typing-effect')) {
-      const typingEffect = new TypingEffect(typingElement, firstQuote, backendQuotes);
-      typingEffect.start();
-    }
-  });
+  document.addEventListener('pjax:complete', initTypingEffect);
 }
 

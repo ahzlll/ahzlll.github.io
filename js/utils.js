@@ -300,6 +300,7 @@
       let docHeight, winHeight, headerHeight, contentMath
 
       return (currentTop, ele) => {
+        // 重新计算高度（当内容变化时）
         if (!docHeight || ele.clientHeight !== docHeight) {
           docHeight = ele.clientHeight
           winHeight = window.innerHeight

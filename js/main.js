@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (scrollPercent < 95) {
       goUpElement.classList.add('show-percent')
-      goUpElement.querySelector('.scroll-percent').textContent = scrollPercent
+      goUpElement.querySelector('.scroll-percent').textContent = scrollPercent + '%'
     } else {
       goUpElement.classList.remove('show-percent')
     }
@@ -559,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tocScrollFn = btf.throttle(() => {
       const currentTop = window.scrollY || document.documentElement.scrollTop
       if (isToc && GLOBAL_CONFIG.percent.toc) {
-        $tocPercentage.textContent = btf.getScrollPercent(currentTop, $article)
+        $tocPercentage.textContent = btf.getScrollPercent(currentTop, $article) + '%'
       }
       findHeadPosition(currentTop)
     }, 100)
