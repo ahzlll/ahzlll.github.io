@@ -1,0 +1,237 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Ahzlll's Blog - 后端开发思考</title><meta name="author" content="Ahz Hong"><meta name="copyright" content="Ahz Hong"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#FFF0F5"><meta name="description" content="用代码编织梦想，用文字记录成长，偶尔记录下踩过的坑和收获">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ahzlll&#39;s Blog">
+<meta property="og:url" content="https://ahzlll.github.io/page/2/index.html">
+<meta property="og:site_name" content="Ahzlll&#39;s Blog">
+<meta property="og:description" content="用代码编织梦想，用文字记录成长，偶尔记录下踩过的坑和收获">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ahzlll.github.io/img/head.jpg">
+<meta property="article:author" content="Ahz Hong">
+<meta property="article:tag" content="后端开发,Java">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ahzlll.github.io/img/head.jpg"><script type="application/ld+json"></script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://ahzlll.github.io/page/2/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="stylesheet" href="/css/index.css?v=5.5.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.1.0/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#8B4A6B')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#FFF0F5')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.12.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Ahzlll\'s Blog',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'home'
+}</script><link rel="stylesheet" href="/css/custom-green-theme.css"><script src="/js/busuanzi-fix.js"></script><meta name="generator" content="Hexo 7.3.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/head.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">17</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">36</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时光轴</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="full_page" id="page-header" style="background-image: url(/img/header-bg.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Ahzlll's Blog</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时光轴</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="site-info"><h1 id="site-title">Ahzlll's Blog</h1><div id="typing-effect"><span id="typing-text"></span></div></div><div id="scroll-down"><i class="fas fa-angle-down scroll-down-effects"></i></div></header><main class="layout" id="content-inner"><div class="recent-posts nc" id="recent-posts"><div class="recent-post-items"><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2025/01/08/2025-01-08-distributed-lock-implementation/" title="分布式锁的实现与思考">分布式锁的实现与思考</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2025-01-08T07:20:00.000Z" title="发表于 2025-01-08 15:20:00">2025-01-08</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/">后端开发</a></span></div><div class="content">为什么需要分布式锁？在分布式系统中，多个服务实例可能同时操作同一个资源。比如：  库存扣减：多个订单同时扣减同一商品的库存 优惠券发放：防止同一用户重复领取 定时任务：防止多个实例同时执行  基于Redis的实现基础实现1234567891011121314151617181920212223242526272829public class RedisLock &#123;        @Autowired    private StringRedisTemplate redisTemplate;        /**     * 加锁     */    public boolean lock(String key, String value, long expireTime) &#123;        Boolean result = redisTemplate.opsForValue()            .setIfAbsent(key, value, expireTime, TimeUnit.SECONDS);        return Boolean.TRU...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2024/12/25/2024-12-25-reflection-on-code-review/" title="代码审查中的一些思考">代码审查中的一些思考</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-12-25T01:30:00.000Z" title="发表于 2024-12-25 09:30:00">2024-12-25</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/">后端开发</a></span></div><div class="content">前言最近参与了很多代码审查，发现了一些共性问题。想记录一下自己的思考，也希望能帮助到其他开发者。 常见问题1. 异常处理不当问题代码： 12345678public void processOrder(Order order) &#123;    try &#123;        orderService.save(order);        emailService.sendEmail(order.getUserEmail());    &#125; catch (Exception e) &#123;        // 吞掉异常，没有任何日志    &#125;&#125;  问题：  捕获了所有异常，但没有任何处理 没有日志，出问题无法排查 可能导致数据不一致（订单保存了，但邮件没发）  改进： 1234567891011121314public void processOrder(Order order) &#123;    try &#123;        orderService.save(order);        emailService.sendEma...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2024/12/10/2024-12-10-redis-cache-penetration-solution/" title="Redis缓存穿透问题的解决方案">Redis缓存穿透问题的解决方案</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-12-10T03:15:00.000Z" title="发表于 2024-12-10 11:15:00">2024-12-10</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/Debug%E7%BB%8F%E9%AA%8C/">Debug经验</a></span></div><div class="content">什么是缓存穿透？缓存穿透是指查询一个不存在的数据，由于缓存中没有，就会去查询数据库。如果大量这样的请求，就会给数据库造成巨大压力。 问题场景用户通过ID查询商品信息，如果ID不存在，每次都会查询数据库： 1234567891011121314151617public Product getProduct(Long id) &#123;    // 1. 先查缓存    String key = &quot;product:&quot; + id;    Product product = redisTemplate.opsForValue().get(key);    if (product != null) &#123;        return product;    &#125;        // 2. 缓存没有，查数据库    product = productMapper.selectById(id);    if (product != null) &#123;        // 3. 写入缓存        redisTemplate.opsForValue(...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2024/11/28/2024-11-28-database-connection-pool-optimization/" title="数据库连接池配置优化的一次实践">数据库连接池配置优化的一次实践</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-11-28T08:20:00.000Z" title="发表于 2024-11-28 16:20:00">2024-11-28</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/">后端开发</a></span></div><div class="content">背景项目使用 Spring Boot + HikariCP 作为数据库连接池。在高并发场景下，经常出现连接超时的错误： 1java.sql.SQLTransientConnectionException: HikariPool - Connection is not available, request timed out after 30000ms  问题分析1. 初始配置12345678spring:  datasource:    hikari:      maximum-pool-size: 10      minimum-idle: 5      connection-timeout: 30000      idle-timeout: 600000      max-lifetime: 1800000  在高并发场景下，10个连接明显不够用。 2. 连接池大小计算公式业界常用的计算公式： 1connections = ((core_count * 2) + effective_spindle_count)  其中：  core_count：CPU核心数 effectiv...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2024/11/15/2024-11-15-spring-boot-debug-experience/" title="Spring Boot 项目中的一次内存泄漏排查经历">Spring Boot 项目中的一次内存泄漏排查经历</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-11-15T06:30:00.000Z" title="发表于 2024-11-15 14:30:00">2024-11-15</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/Debug%E7%BB%8F%E9%AA%8C/">Debug经验</a></span></div><div class="content">问题描述最近在生产环境发现一个Spring Boot应用的内存使用量持续增长，最终导致OOM（OutOfMemoryError）。应用运行一段时间后，内存占用从初始的500MB逐渐增长到2GB+，最终崩溃。 排查过程1. 初步分析首先使用 jmap 和 jstat 工具查看内存使用情况： 12jmap -heap &lt;pid&gt;jstat -gc &lt;pid&gt; 1000  发现老年代（Old Generation）内存持续增长，Full GC频繁但效果不明显。 2. 生成堆转储1jmap -dump:format=b,file=heap.hprof &lt;pid&gt;  使用 Eclipse MAT（Memory Analyzer Tool）分析堆转储文件。 3. 发现问题通过MAT分析，发现大量 ThreadLocal 对象没有被清理。进一步分析代码，发现： 123456789public class UserContext &#123;    private static final ThreadLocal&lt;UserInfo&gt; userInf...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2024/11/03/2024-11-03-my-first-blog-post/" title="博客开张：记录本大学生后端开发的思考与成长">博客开张：记录本大学生后端开发的思考与成长</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-11-03T02:00:00.000Z" title="发表于 2024-11-03 10:00:00">2024-11-03</time></span><span class="article-meta"><span class="article-meta-separator">|</span><i class="fas fa-inbox"></i><a class="article-meta__categories" href="/categories/%E6%80%9D%E8%80%83/">思考</a></span></div><div class="content">写在前面今天是我开始写博客的第一天。作为一名后端开发者，我决定用这个博客记录我在开发过程中的思考、踩过的坑以及收获。 为什么要写博客？ 知识沉淀：把零散的知识点整理成体系化的文章 问题复盘：记录debug过程，下次遇到类似问题能快速定位 技术成长：通过写作加深对技术的理解 分享交流：希望能帮助到遇到同样问题的开发者  博客内容规划这个博客主要会记录：  后端开发思考：架构设计、性能优化、代码质量等 Debug经验：实际项目中遇到的问题和解决方案 技术学习：学习新技术的心得和总结 踩坑记录：那些让人头疼的bug和解决方案  写在最后希望这个博客能见证我的技术成长，也希望能为其他开发者提供一些参考。 路漫漫其修远兮，吾将上下而求索。 </div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2024/11/03/hello-world/" title="Hello World">Hello World</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">发表于</span><time datetime="2024-11-03T01:00:00.000Z" title="发表于 2024-11-03 09:00:00">2024-11-03</time></span></div><div class="content">Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub. Quick StartCreate a new post1$ hexo new &quot;My New Post&quot;  More info: Writing Run server1$ hexo server  More info: Server Generate static files1$ hexo generate  More info: Generating Deploy to remote sites1$ hexo deploy  More info: Deployment </div></div></div></div><nav id="pagination"><div class="pagination"><a class="extend prev" rel="prev" href="/"><i class="fas fa-chevron-left fa-fw"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/head.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Ahz Hong</div><div class="author-info-description">用代码编织梦想，用文字记录成长，偶尔记录下踩过的坑和收获</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">17</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">36</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/ahzlll"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/11/08/2025-11-08-one-year-summary/" title="写博客一年来的总结与思考">写博客一年来的总结与思考</a><time datetime="2025-11-08T08:00:00.000Z" title="发表于 2025-11-08 16:00:00">2025-11-08</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/10/08/2025-10-08-distributed-id-generation/" title="分布式ID生成方案对比与实践">分布式ID生成方案对比与实践</a><time datetime="2025-10-08T06:25:00.000Z" title="发表于 2025-10-08 14:25:00">2025-10-08</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/09/12/2025-09-12-design-patterns-in-practice/" title="设计模式在实际项目中的应用">设计模式在实际项目中的应用</a><time datetime="2025-09-12T02:15:00.000Z" title="发表于 2025-09-12 10:15:00">2025-09-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/08/05/2025-08-05-jvm-gc-optimization/" title="JVM GC调优实战记录">JVM GC调优实战记录</a><time datetime="2025-08-05T07:30:00.000Z" title="发表于 2025-08-05 15:30:00">2025-08-05</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/07/10/2025-07-10-microservice-circuit-breaker/" title="微服务中的熔断器模式实践">微服务中的熔断器模式实践</a><time datetime="2025-07-10T01:20:00.000Z" title="发表于 2025-07-10 09:20:00">2025-07-10</time></div></div></div></div><div class="card-widget card-categories"><div class="item-headline">
+            <i class="fas fa-folder-open"></i>
+            <span>分类</span>
+            
+          </div>
+          <ul class="card-category-list" id="aside-cat-list">
+            <li class="card-category-list-item "><a class="card-category-list-link" href="/categories/Debug%E7%BB%8F%E9%AA%8C/"><span class="card-category-list-name">Debug经验</span><span class="card-category-list-count">5</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/"><span class="card-category-list-name">后端开发</span><span class="card-category-list-count">9</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E6%80%9D%E8%80%83/"><span class="card-category-list-name">思考</span><span class="card-category-list-count">2</span></a></li>
+          </ul></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>标签</span></div><div class="card-tag-cloud"><a href="/tags/%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F/" style="font-size: 1.1em; color: #999">代码质量</a> <a href="/tags/ID%E7%94%9F%E6%88%90/" style="font-size: 1.1em; color: #999">ID生成</a> <a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" style="font-size: 1.1em; color: #999">消息队列</a> <a href="/tags/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91/" style="font-size: 1.5em; color: #99a9bf">后端开发</a> <a href="/tags/Spring/" style="font-size: 1.1em; color: #999">Spring</a> <a href="/tags/JVM/" style="font-size: 1.1em; color: #999">JVM</a> <a href="/tags/Spring-Boot/" style="font-size: 1.1em; color: #999">Spring Boot</a> <a href="/tags/%E6%97%A5%E5%BF%97/" style="font-size: 1.1em; color: #999">日志</a> <a href="/tags/RESTful/" style="font-size: 1.1em; color: #999">RESTful</a> <a href="/tags/GC/" style="font-size: 1.1em; color: #999">GC</a> <a href="/tags/%E7%86%94%E6%96%AD%E5%99%A8/" style="font-size: 1.1em; color: #999">熔断器</a> <a href="/tags/SQL%E4%BC%98%E5%8C%96/" style="font-size: 1.1em; color: #999">SQL优化</a> <a href="/tags/Resilience4j/" style="font-size: 1.1em; color: #999">Resilience4j</a> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" style="font-size: 1.1em; color: #999">分布式锁</a> <a href="/tags/%E4%BB%A3%E7%A0%81%E8%AE%BE%E8%AE%A1/" style="font-size: 1.1em; color: #999">代码设计</a> <a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" style="font-size: 1.1em; color: #999">微服务</a> <a href="/tags/API%E8%AE%BE%E8%AE%A1/" style="font-size: 1.1em; color: #999">API设计</a> <a href="/tags/%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/" style="font-size: 1.1em; color: #999">最佳实践</a> <a href="/tags/%E4%BA%8B%E5%8A%A1/" style="font-size: 1.1em; color: #999">事务</a> <a href="/tags/Debug/" style="font-size: 1.1em; color: #999">Debug</a> <a href="/tags/%E7%BC%93%E5%AD%98/" style="font-size: 1.1em; color: #999">缓存</a> <a href="/tags/%E7%BC%93%E5%AD%98%E7%A9%BF%E9%80%8F/" style="font-size: 1.1em; color: #999">缓存穿透</a> <a href="/tags/%E5%BC%82%E6%AD%A5%E5%A4%84%E7%90%86/" style="font-size: 1.1em; color: #999">异步处理</a> <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/" style="font-size: 1.23em; color: #999ea6">分布式系统</a> <a href="/tags/MySQL/" style="font-size: 1.1em; color: #999">MySQL</a> <a href="/tags/RabbitMQ/" style="font-size: 1.1em; color: #999">RabbitMQ</a> <a href="/tags/%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F/" style="font-size: 1.1em; color: #999">内存泄漏</a> <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/" style="font-size: 1.23em; color: #999ea6">数据库</a> <a href="/tags/%E9%9A%8F%E7%AC%94/" style="font-size: 1.1em; color: #999">随笔</a> <a href="/tags/%E6%80%9D%E8%80%83/" style="font-size: 1.23em; color: #999ea6">思考</a> <a href="/tags/%E6%80%BB%E7%BB%93/" style="font-size: 1.1em; color: #999">总结</a> <a href="/tags/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/" style="font-size: 1.1em; color: #999">设计模式</a> <a href="/tags/HikariCP/" style="font-size: 1.1em; color: #999">HikariCP</a> <a href="/tags/Redis/" style="font-size: 1.23em; color: #999ea6">Redis</a> <a href="/tags/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/" style="font-size: 1.37em; color: #99a4b2">性能优化</a> <a href="/tags/%E4%BB%A3%E7%A0%81%E5%AE%A1%E6%9F%A5/" style="font-size: 1.1em; color: #999">代码审查</a></div></div><div class="card-widget card-archives">
+    <div class="item-headline">
+      <i class="fas fa-archive"></i>
+      <span>时光轴</span>
+      <a class="card-more-btn" href="/archives/"
+            title="查看更多">
+            <i class="fas fa-angle-right"></i>
+          </a>
+    </div>
+  
+    <ul class="card-archive-list">
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/11/">
+            <span class="card-archive-list-date">
+              十一月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/10/">
+            <span class="card-archive-list-date">
+              十月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/09/">
+            <span class="card-archive-list-date">
+              九月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/08/">
+            <span class="card-archive-list-date">
+              八月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/07/">
+            <span class="card-archive-list-date">
+              七月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/06/">
+            <span class="card-archive-list-date">
+              六月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/05/">
+            <span class="card-archive-list-date">
+              五月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/04/">
+            <span class="card-archive-list-date">
+              四月 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+    </ul>
+  </div><div class="card-widget card-webinfo"><div class="item-headline"><i class="fas fa-chart-line"></i><span>网站信息</span></div><div class="webinfo"><div class="webinfo-item"><div class="item-name">文章数目 :</div><div class="item-count">17</div></div><div class="webinfo-item"><div class="item-name">本站访客数 :</div><div class="item-count" id="busuanzi_value_site_uv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">本站总浏览量 :</div><div class="item-count" id="busuanzi_value_site_pv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">最后更新时间 :</div><div class="item-count" id="last-push-date" data-lastPushDate="2025-11-08T07:52:42.898Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Ahz Hong</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.5.1"></script><script src="/js/main.js?v=5.5.1"></script><div class="js-pjax"></div><script src="/js/typing-effect.js"></script><script src="/js/code-check.js"></script><script async data-pjax src="https://cdn.jsdelivr.net/npm/busuanzi@2.3.0/bsz.pure.mini.js"></script></div></body></html>
