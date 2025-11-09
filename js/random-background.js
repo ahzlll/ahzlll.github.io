@@ -62,31 +62,43 @@
     return pageType;
   }
 
-  // 立即加载背景图片（不使用延迟）
-  function setModuleBackground() {
+  // 使用 Intersection Observer 延迟加载背景图片
+  function setModuleBackgroundLazy() {
     const pageHeader = document.getElementById('page-header');
     
     if (!pageHeader) {
-      // 如果元素不存在，快速重试（最多等待 500ms）
-      let retryCount = 0;
-      const maxRetries = 5;
-      const retryInterval = setInterval(() => {
-        retryCount++;
-        const header = document.getElementById('page-header');
-        if (header || retryCount >= maxRetries) {
-          clearInterval(retryInterval);
-          if (header) {
-            cachedPageHeader = header;
-            loadBackgroundImage();
-          }
-        }
-      }, 100);
+      // 如果元素不存在，使用 requestIdleCallback 延迟重试
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          setTimeout(setModuleBackgroundLazy, 100);
+        }, { timeout: 1000 });
+      } else {
+        setTimeout(setModuleBackgroundLazy, 100);
+      }
       return;
     }
 
     cachedPageHeader = pageHeader;
-    // 立即加载背景图片
-    loadBackgroundImage();
+
+    // 使用 Intersection Observer 检测元素是否可见
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            // 元素可见时加载背景图片
+            loadBackgroundImage();
+            observer.disconnect();
+          }
+        });
+      }, {
+        rootMargin: '50px' // 提前 50px 开始加载
+      });
+
+      observer.observe(pageHeader);
+    } else {
+      // 不支持 Intersection Observer 时直接加载
+      loadBackgroundImage();
+    }
   }
 
   // 加载背景图片
@@ -119,22 +131,25 @@
     img.src = imagePath;
   }
 
-  // 初始化函数（立即执行，优先加载背景图片）
+  // 初始化函数（延迟执行，不阻塞渲染）
   function init() {
-    // 使用 requestAnimationFrame 确保 DOM 已渲染，但立即执行
-    if (document.readyState === 'loading') {
-      // 如果 DOM 还在加载，等待 DOMContentLoaded
-      document.addEventListener('DOMContentLoaded', () => {
-        requestAnimationFrame(setModuleBackground);
-      });
+    // 使用 requestIdleCallback 延迟执行，不阻塞关键渲染路径
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => {
+        setModuleBackgroundLazy();
+      }, { timeout: 2000 });
     } else {
-      // DOM 已加载，立即执行
-      requestAnimationFrame(setModuleBackground);
+      // 降级方案：使用 setTimeout
+      setTimeout(setModuleBackgroundLazy, 0);
     }
   }
 
-  // 立即初始化
-  init();
+  // 页面加载完成后初始化
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 
   // 如果启用了 pjax，在页面切换时也更新背景
   document.addEventListener('pjax:complete', () => {
@@ -142,8 +157,16 @@
     cachedPageHeader = null;
     cachedPageType = null;
     
-    // 使用 requestAnimationFrame 确保 DOM 已更新，立即加载
-    requestAnimationFrame(setModuleBackground);
+    // 使用 requestAnimationFrame 确保 DOM 已更新
+    requestAnimationFrame(() => {
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          setModuleBackgroundLazy();
+        }, { timeout: 500 });
+      } else {
+        setTimeout(setModuleBackgroundLazy, 50);
+      }
+    });
   });
 })();
 

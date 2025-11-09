@@ -106,59 +106,31 @@
     return !isNaN(num) && num > 10000;
   }
 
-  // ========== 获取当前显示的值 ==========
-  function getCurrentDisplayValue(element) {
-    if (!element) return null;
-    const text = element.textContent.trim();
-    // 移除格式化字符，转换为数字
-    const numStr = text.replace(/[kKwW亿万千]/g, '');
-    const num = parseFloat(numStr);
-    return isNaN(num) ? null : num;
-  }
-
   // ========== 更新统计数据显示 ==========
   function updateStatsDisplay() {
     // 更新站点访客数
     const siteUV = document.getElementById('busuanzi_value_site_uv');
     if (siteUV) {
-      const storedCount = getOrInitCount(STORAGE_KEYS.SITE_UV, 'busuanzi_value_site_uv');
-      const currentDisplay = getCurrentDisplayValue(siteUV);
-      // 使用 localStorage 和当前显示值中的较大者，这样可以防止不蒜子脚本将值重置为较小的值
-      const count = Math.max(storedCount, currentDisplay || 0);
-      // 如果计算出的值大于 localStorage 中的值，更新 localStorage
-      if (count > storedCount) {
-        localStorage.setItem(STORAGE_KEYS.SITE_UV, count.toString());
-      }
+      // 移除加载图标检查，直接更新（因为我们已经有了本地存储的数据）
+      const count = getOrInitCount(STORAGE_KEYS.SITE_UV, 'busuanzi_value_site_uv');
       siteUV.textContent = count >= 1000 ? formatNumber(count) : count.toString();
     }
 
     // 更新站点浏览量
     const sitePV = document.getElementById('busuanzi_value_site_pv');
     if (sitePV) {
-      const storedCount = getOrInitCount(STORAGE_KEYS.SITE_PV, 'busuanzi_value_site_pv');
-      const currentDisplay = getCurrentDisplayValue(sitePV);
-      // 使用 localStorage 和当前显示值中的较大者，这样可以防止不蒜子脚本将值重置为较小的值
-      const count = Math.max(storedCount, currentDisplay || 0);
-      // 如果计算出的值大于 localStorage 中的值，更新 localStorage
-      if (count > storedCount) {
-        localStorage.setItem(STORAGE_KEYS.SITE_PV, count.toString());
-      }
+      // 移除加载图标检查，直接更新（因为我们已经有了本地存储的数据）
+      const count = getOrInitCount(STORAGE_KEYS.SITE_PV, 'busuanzi_value_site_pv');
       sitePV.textContent = count >= 1000 ? formatNumber(count) : count.toString();
     }
 
     // 更新页面浏览量
     const pagePV = document.getElementById('busuanzi_value_page_pv');
     if (pagePV) {
+      // 移除加载图标检查，直接更新（因为我们已经有了本地存储的数据）
       const pagePath = window.location.pathname;
       const pageKey = STORAGE_KEYS.PAGE_PV + pagePath;
-      const storedCount = getOrInitCount(pageKey, 'busuanzi_value_page_pv');
-      const currentDisplay = getCurrentDisplayValue(pagePV);
-      // 使用 localStorage 和当前显示值中的较大者，这样可以防止不蒜子脚本将值重置为较小的值
-      const count = Math.max(storedCount, currentDisplay || 0);
-      // 如果计算出的值大于 localStorage 中的值，更新 localStorage
-      if (count > storedCount) {
-        localStorage.setItem(pageKey, count.toString());
-      }
+      const count = getOrInitCount(pageKey, 'busuanzi_value_page_pv');
       pagePV.textContent = count >= 1000 ? formatNumber(count) : count.toString();
     }
   }
@@ -188,27 +160,12 @@
           if (isAbnormalValue(currentValue)) {
             const count = getOrInitCount(STORAGE_KEYS.SITE_UV, 'busuanzi_value_site_uv');
             target.textContent = count >= 1000 ? formatNumber(count) : count.toString();
-          } else {
-            // 如果值不是异常大，检查是否小于 localStorage 中的值
-            // 如果小于，说明不蒜子脚本可能将值重置了，需要恢复
-            const storedCount = getOrInitCount(STORAGE_KEYS.SITE_UV, 'busuanzi_value_site_uv');
-            const currentDisplay = getCurrentDisplayValue(target);
-            if (currentDisplay !== null && currentDisplay < storedCount) {
-              target.textContent = storedCount >= 1000 ? formatNumber(storedCount) : storedCount.toString();
-            }
           }
         } else if (elementId === 'busuanzi_value_site_pv') {
           const currentValue = target.textContent.trim();
           if (isAbnormalValue(currentValue)) {
             const count = getOrInitCount(STORAGE_KEYS.SITE_PV, 'busuanzi_value_site_pv');
             target.textContent = count >= 1000 ? formatNumber(count) : count.toString();
-          } else {
-            // 如果值不是异常大，检查是否小于 localStorage 中的值
-            const storedCount = getOrInitCount(STORAGE_KEYS.SITE_PV, 'busuanzi_value_site_pv');
-            const currentDisplay = getCurrentDisplayValue(target);
-            if (currentDisplay !== null && currentDisplay < storedCount) {
-              target.textContent = storedCount >= 1000 ? formatNumber(storedCount) : storedCount.toString();
-            }
           }
         } else if (elementId === 'busuanzi_value_page_pv') {
           const currentValue = target.textContent.trim();
@@ -217,15 +174,6 @@
             const pageKey = STORAGE_KEYS.PAGE_PV + pagePath;
             const count = getOrInitCount(pageKey, 'busuanzi_value_page_pv');
             target.textContent = count >= 1000 ? formatNumber(count) : count.toString();
-          } else {
-            // 如果值不是异常大，检查是否小于 localStorage 中的值
-            const pagePath = window.location.pathname;
-            const pageKey = STORAGE_KEYS.PAGE_PV + pagePath;
-            const storedCount = getOrInitCount(pageKey, 'busuanzi_value_page_pv');
-            const currentDisplay = getCurrentDisplayValue(target);
-            if (currentDisplay !== null && currentDisplay < storedCount) {
-              target.textContent = storedCount >= 1000 ? formatNumber(storedCount) : storedCount.toString();
-            }
           }
         }
       });
