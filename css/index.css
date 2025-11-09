@@ -2638,6 +2638,16 @@ figure.highlight pre .javascript .function {
   align-items: center;
   height: 16.8em;
 }
+#recent-posts .recent-post-item .recent-post-item-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  text-indent: -9999px;
+  overflow: hidden;
+}
 @media screen and (max-width: 768px) {
   #recent-posts .recent-post-item {
     -webkit-box-orient: vertical;
@@ -2667,8 +2677,14 @@ figure.highlight pre .javascript .function {
 }
 #recent-posts .recent-post-item .post_cover {
   overflow: hidden;
+  position: relative;
+  z-index: 2;
   width: 42%;
   height: 100%;
+}
+#recent-posts .recent-post-item .post_cover a {
+  position: relative;
+  z-index: 2;
 }
 @media screen and (max-width: 768px) {
   #recent-posts .recent-post-item .post_cover {
@@ -2716,6 +2732,8 @@ figure.highlight pre .javascript .function {
   }
 }
 #recent-posts .recent-post-item >.recent-post-info > .article-title {
+  position: relative;
+  z-index: 2;
   color: var(--text-highlight-color);
   font-size: 1.55em;
   line-height: 1.4;
@@ -2767,6 +2785,8 @@ figure.highlight pre .javascript .function {
   margin: 0 4px;
 }
 #recent-posts .recent-post-item >.recent-post-info > .article-meta-wrap a {
+  position: relative;
+  z-index: 2;
   color: var(--card-meta);
 }
 #recent-posts .recent-post-item >.recent-post-info > .article-meta-wrap a:hover {
