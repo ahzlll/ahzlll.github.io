@@ -46,15 +46,25 @@
     return lastCheck === today;
   }
 
-  // 更新公告内容（带重试机制）
-  async function updateAnnouncement(retryCount = 0, maxRetries = 10) {
-    const announcementElement = document.querySelector('.announcement_content');
+  // 更新代码状态（带重试机制）
+  async function updateCodeStatus(retryCount = 0, maxRetries = 10) {
+    // 优先查找新的状态元素
+    let statusElement = document.getElementById('code-status');
+    
+    // 如果新元素不存在，尝试查找旧的公告元素（兼容旧版本）
+    if (!statusElement) {
+      const announcementElement = document.querySelector('.announcement_content');
+      if (announcementElement && !announcementElement.querySelector('div')) {
+        // 旧版本：直接更新整个公告内容
+        statusElement = announcementElement;
+      }
+    }
     
     // 如果元素不存在且还有重试次数，则延迟重试
-    if (!announcementElement) {
+    if (!statusElement) {
       if (retryCount < maxRetries) {
         setTimeout(() => {
-          updateAnnouncement(retryCount + 1, maxRetries);
+          updateCodeStatus(retryCount + 1, maxRetries);
         }, 100);
       }
       return;
@@ -66,9 +76,9 @@
       hasCode: [
         '今天写代码了，我真棒！✨',
         '今天也在努力敲代码，继续加油！💪',
-        '代码使我快乐，今天又是充实的一天！🎉',
-        '今天写了不少代码，感觉自己棒棒哒！🌟',
-        '代码写得不错，给自己点个赞！👍'
+        '代码使我快乐，今天又是充实的一天🎉',
+        '今天写了不少代码，感觉自己棒棒哒🌟',
+        '今天代码写得不错，给自己点个赞👍'
       ],
       noCode: [
         '今天有点懒，还没写代码... 😴',
@@ -82,7 +92,12 @@
     const messageList = hasCodeToday ? messages.hasCode : messages.noCode;
     const randomMessage = messageList[Math.floor(Math.random() * messageList.length)];
     
-    announcementElement.innerHTML = randomMessage;
+    // 如果是新的状态元素，只更新文本；如果是旧的公告元素，更新整个内容
+    if (statusElement.id === 'code-status') {
+      statusElement.textContent = randomMessage;
+    } else {
+      statusElement.innerHTML = randomMessage;
+    }
     
     // 如果今天有代码，更新本地存储
     if (hasCodeToday) {
@@ -95,13 +110,13 @@
     // 等待 DOM 完全加载后再执行
     if (document.readyState === 'complete') {
       // 页面已完全加载，直接执行
-      updateAnnouncement();
+      updateCodeStatus();
     } else {
       // 等待页面完全加载
       window.addEventListener('load', () => {
         // 使用 requestAnimationFrame 确保 DOM 已渲染
         requestAnimationFrame(() => {
-          updateAnnouncement();
+          updateCodeStatus();
         });
       });
     }
@@ -120,7 +135,7 @@
     requestAnimationFrame(() => {
       // 延迟执行，确保 PJAX 替换的 DOM 已完全渲染
       setTimeout(() => {
-        updateAnnouncement();
+        updateCodeStatus();
       }, 100);
     });
   });

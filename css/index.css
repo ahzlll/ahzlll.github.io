@@ -2317,6 +2317,26 @@ figure.highlight pre .javascript .function {
   flex: 1;
   padding: 0 16px;
 }
+#archive .article-sort-title {
+  font-size: 2.2em !important;
+  font-weight: bold !important;
+}
+#archive .article-sort {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+#archive .article-sort .article-sort-item-title {
+  font-size: 1.3em !important;
+  font-weight: bold !important;
+}
+#archive .article-sort .article-sort-item-time {
+  font-size: 1em !important;
+  font-weight: bold !important;
+}
+#archive .article-sort .article-sort-item.year {
+  font-size: 1.8em !important;
+  font-weight: bold !important;
+}
 .category-lists .category-title {
   font-size: 2.57em;
 }
@@ -2330,7 +2350,7 @@ figure.highlight pre .javascript .function {
 }
 .category-lists .category-list a {
   color: var(--font-color);
-  font-size: 1.2em;
+  font-size: 2.4em;
   font-weight: bold;
 }
 .category-lists .category-list a:hover {
@@ -3213,6 +3233,26 @@ figure.highlight pre .javascript .function {
 }
 .page-title + .tag-cloud-list {
   text-align: left;
+}
+#tag .article-sort-title {
+  font-size: 2.2em !important;
+  font-weight: bold !important;
+}
+#tag .article-sort {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+#tag .article-sort .article-sort-item-title {
+  font-size: 1.3em !important;
+  font-weight: bold !important;
+}
+#tag .article-sort .article-sort-item-time {
+  font-size: 1em !important;
+  font-weight: bold !important;
+}
+#tag .article-sort .article-sort-item.year {
+  font-size: 1.8em !important;
+  font-weight: bold !important;
 }
 @-moz-keyframes tagsFadeIn {
   from {
