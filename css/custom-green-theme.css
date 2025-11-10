@@ -954,3 +954,132 @@ input[type="search"]:focus {
 #post-meta .post-meta-separator:has(+ .post-meta-pv-cv) {
   display: none !important;
 }
+
+/* ============================================
+   为"写博客一年来的总结与思考"文章添加背景图片（图片40%，文字60%分开显示）
+   文字在左边，图片在右边，无动画效果
+   ============================================ */
+
+/* 为特定文章设置布局 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) {
+  position: relative !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+/* 创建图片区域（40%，在右边） */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"])::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 40% !important;
+  height: 100% !important;
+  background-image: url('/img/think.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 创建占位元素，占据 40% 的 flex 空间（用于图片区域，在右边） */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"])::after {
+  content: '' !important;
+  width: 40% !important;
+  flex: 0 0 40% !important;
+  height: 100% !important;
+  order: 2 !important; /* 确保在文字内容之后（右边） */
+}
+
+/* 调整文字内容区域宽度为 60%，并设置 flex 属性（在左边） */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) .recent-post-info {
+  width: 60% !important;
+  flex: 0 0 60% !important;
+  padding-left: 40px !important;
+  padding-right: 20px !important;
+  position: relative !important;
+  z-index: 1 !important;
+  order: 1 !important; /* 确保在图片之前（左边） */
+}
+
+/* 确保链接区域不覆盖图片 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) .recent-post-item-link {
+  z-index: 2 !important;
+}
+
+/* 隐藏原有的封面图（如果有） */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) .post_cover {
+  display: none !important;
+}
+
+/* 覆盖通用 hover 规则，确保 hover 时图片仍然在右边 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]):hover {
+  flex-direction: row !important; /* 确保 hover 时仍然是横向布局 */
+}
+
+/* 覆盖通用 hover 的 ::before 规则，确保 hover 时图片位置不变 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]):hover::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  left: auto !important; /* 覆盖通用规则中的 left: -2px */
+  bottom: auto !important; /* 覆盖通用规则中的 bottom: -2px */
+  width: 40% !important;
+  height: 100% !important;
+  background-image: url('/img/think.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  border-radius: 0 !important; /* 移除通用规则中的 border-radius */
+  opacity: 1 !important; /* 移除通用规则中的动画效果 */
+  animation: none !important; /* 禁用动画 */
+}
+
+/* 确保 hover 时文字内容区域仍然在左边 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]):hover .recent-post-info {
+  width: 60% !important;
+  flex: 0 0 60% !important;
+  order: 1 !important; /* 确保在左边 */
+}
+
+/* 确保 hover 时占位元素仍然在右边 */
+#recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]):hover::after {
+  content: '' !important;
+  width: 40% !important;
+  flex: 0 0 40% !important;
+  height: 100% !important;
+  order: 2 !important; /* 确保在右边 */
+}
+
+/* 移动端响应式：图片在上，文字在下 */
+@media screen and (max-width: 768px) {
+  #recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) {
+    flex-direction: column !important;
+  }
+  
+  #recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"])::before {
+    width: 100% !important;
+    height: 230px !important;
+    right: 0 !important;
+    top: 0 !important;
+  }
+  
+  /* 移动端隐藏占位元素 */
+  #recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"])::after {
+    display: none !important;
+  }
+  
+  #recent-posts .recent-post-item:has(.recent-post-item-link[href*="one-year-summary"]) .recent-post-info {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    margin-top: 0 !important;
+    order: 2 !important; /* 移动端文字在图片下方 */
+  }
+}
